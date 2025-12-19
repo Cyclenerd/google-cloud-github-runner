@@ -11,14 +11,22 @@ def mock_env_vars(monkeypatch):
 
 
 @pytest.fixture
-def mock_instance_client():
-    """Mock the Compute Engine instance client."""
-    with patch('app.clients.gcloud_client.compute_v1.InstancesClient') as mock:
-        yield mock
+def mock_compute_clients():
+    """Mock the Compute Engine clients."""
+    with patch('app.clients.gcloud_client.compute_v1.InstancesClient') as mock_instances, \
+         patch('app.clients.gcloud_client.compute_v1.RegionInstanceTemplatesClient') as mock_templates:
+        yield mock_instances, mock_templates
+
+
+@pytest.fixture
+def mock_gcloud_auth():
+    """Mock Google Cloud authentication to prevent credential errors."""
+    with patch('google.auth.default', return_value=(MagicMock(), 'test-project')):
+        yield
 
 
 class TestGCloudClient:
-    def test_init_with_env_vars(self, mock_env_vars, mock_instance_client):
+    def test_init_with_env_vars(self, mock_env_vars, mock_compute_clients, mock_gcloud_auth):
         """Test GCloudClient initialization with environment variables."""
         client = GCloudClient()
 
@@ -26,7 +34,7 @@ class TestGCloudClient:
         assert client.zone == 'us-central1-a'
         assert client.region == 'us-central1'
 
-    def test_init_default_zone(self, monkeypatch, mock_instance_client):
+    def test_init_default_zone(self, monkeypatch, mock_compute_clients, mock_gcloud_auth):
         """Test GCloudClient initialization with default zone."""
         monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
         monkeypatch.delenv('GOOGLE_CLOUD_ZONE', raising=False)
@@ -36,7 +44,7 @@ class TestGCloudClient:
         assert client.zone == 'us-central1-a'
         assert client.region == 'us-central1'
 
-    def test_init_missing_project_id(self, mock_instance_client):
+    def test_init_missing_project_id(self, mock_compute_clients, mock_gcloud_auth):
         """Test GCloudClient initialization with missing project ID."""
         with patch.dict('os.environ', {}, clear=True):
             client = GCloudClient()

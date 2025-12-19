@@ -63,13 +63,10 @@ jobs:
           tflint_version: latest
 
       - name: 🔍 Run TFLint
-        run: |
-           tflint --chdir gcp
+        run: tflint
 
       - name: 🛡️ Run tfsec
         uses: aquasecurity/tfsec-action@v1.0.3
-        with:
-          working_directory: gcp
 
   shell:
     name: "Shell 🐚"
