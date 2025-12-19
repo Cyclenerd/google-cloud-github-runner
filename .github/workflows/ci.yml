@@ -1,0 +1,124 @@
+name: "CI"
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  python:
+    name: "Python 🐍"
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛎️ Checkout
+        uses: actions/checkout@v6
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+          cache: 'pip'
+
+      - name: 📥 Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: 🔍 Lint with flake8
+        run: |
+          flake8 --ignore=W292,W503 --max-line-length=127 --show-source --statistics *.py app/*.py app/routes/*.py app/services/*.py app/clients/*.py app/utils/*.py tests/*.py tests/integration/*.py tests/unit/*.py
+
+      - name: 🧪 Run tests
+        run: |
+          python -m pytest tests/ --cov
+
+  terraform:
+    name: "Terraform 🏗️"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gcp
+    steps:
+      - name: 🛎️ Checkout
+        uses: actions/checkout@v6
+
+      - name: 🏗️ Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: 🔍 Terraform Format
+        run: terraform fmt -check -recursive
+
+      - name: 📋 Terraform Init
+        run: terraform init -backend=false
+
+      - name: 🔍 Terraform Validate
+        run: terraform validate
+
+      - name: 🔒 Setup TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: latest
+
+      - name: 🔍 Run TFLint
+        run: |
+           tflint --chdir gcp
+
+      - name: 🛡️ Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: gcp
+
+  shell:
+    name: "Shell 🐚"
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛎️ Checkout
+        uses: actions/checkout@v6
+
+      - name: 🔍 ShellCheck
+        run: |
+          shellcheck tools/*.sh && shellcheck gcp/*.sh && shellcheck gcp/startup/*.sh
+
+  docker:
+    name: "Docker 🐳"
+    needs: [python, terraform, shell]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛎️ Checkout
+        uses: actions/checkout@v6
+
+      - name: 🏗️ Build Docker image
+        run: |
+          docker build -t google-cloud-github-runner .
+
+      - name: 🚀 Start Docker container
+        run: |
+          docker run -d --name google-cloud-github-runner -p 8080:8080 google-cloud-github-runner
+
+      - name: ⏳ Wait for container to be ready
+        run: |
+          # Wait for up to 30 seconds for the service to respond
+          for i in {1..30}; do
+            if curl -s http://localhost:8080 > /dev/null; then
+              echo "Container is ready!"
+              exit 0
+            fi
+            echo "Waiting for container... ($i/30)"
+            sleep 1
+          done
+          echo "Container failed to start in time"
+          docker logs google-cloud-github-runner
+          exit 1
+
+      - name: 🔍 Access Container web app via curl
+        run: |
+          curl -v http://localhost:8080
+
+      - name: 🧹 Cleanup
+        if: always()
+        run: |
+          docker stop google-cloud-github-runner || true
+          docker rm google-cloud-github-runner || true

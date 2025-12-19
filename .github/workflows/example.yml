@@ -1,0 +1,10 @@
+name: Example
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: gcp-ubuntu-latest  # Must match GCE Template Name
+    steps:
+      - run: echo "Hello from Google Cloud!"

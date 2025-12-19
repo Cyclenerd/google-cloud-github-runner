@@ -1,0 +1,8 @@
+# https://developer.hashicorp.com/terraform/language/backend/gcs
+
+terraform {
+  backend "gcs" {
+    bucket = "${bucket}"
+    prefix = "terraform/state"
+  }
+}

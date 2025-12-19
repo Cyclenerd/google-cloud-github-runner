@@ -1,0 +1,19 @@
+{% set title = 'Setup Complete' %}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="success">
+    <strong>Success!</strong> Your GitHub App has been installed successfully!
+</div>
+<p>Your GitHub Actions Runners manager is now configured and ready to use. When workflows request runners, this service
+    will automatically provision them.</p>
+
+<a href="https://github.com/" class="btn-primary">Adjust your GitHub Actions workflows</a>
+
+<script>
+    // Trigger container restart after 0.5 seconds to reload environment variables
+    setTimeout(function () {
+        fetch('/setup/trigger-restart', { method: 'POST' });
+    }, 500);
+</script>
+{% endblock %}
