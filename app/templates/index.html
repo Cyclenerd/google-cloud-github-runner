@@ -1,0 +1,11 @@
+{% set title = 'GitHub Actions Runners Manager' %}
+{% extends "base.html" %}
+
+{% block content %}
+<p>
+    Welcome to the GitHub Actions Runners manager - a service for managing self-hosted GitHub Actions Runners on Google
+    Cloud Platform.
+</p>
+
+<a href="{{ url_for('setup.setup') }}" class="btn-primary">Setup GitHub App</a>
+{% endblock %}

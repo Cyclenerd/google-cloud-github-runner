@@ -1,0 +1,94 @@
+{% set title = 'Setup GitHub Actions Runners Manager' %}
+{% extends "base.html" %}
+
+{% block content %}
+<p>Register a new GitHub App for this runner manager.</p>
+<p>This will configure the app with the necessary permissions and webhook settings.</p>
+
+<form id="setupForm" method="post">
+    <input type="hidden" name="manifest" value="{{ manifest }}">
+
+    <div class="form-group">
+        <h2>Choose Installation Type</h2>
+        <p>Select where you want to install the GitHub App:</p>
+
+        <div class="radio-group">
+            <label class="radio-option">
+                <input type="radio" name="installType" value="user" checked>
+                <span class="radio-label">
+                    <strong>Personal Account</strong>
+                    <small>Install on your personal GitHub account</small>
+                </span>
+            </label>
+
+            <label class="radio-option">
+                <input type="radio" name="installType" value="org">
+                <span class="radio-label">
+                    <strong>Organization</strong>
+                    <small>Install on a GitHub organization</small>
+                </span>
+            </label>
+        </div>
+
+        <div class="org-input" id="orgInputContainer">
+            <label for="orgName">Organization Name:</label>
+            <input type="text" id="orgName" name="orgName" placeholder="e.g., my-company">
+            <div class="error" id="orgError">Please enter an organization name</div>
+        </div>
+    </div>
+
+    <button type="submit" id="submitBtn" class="btn-success">Create GitHub App</button>
+</form>
+
+<script>
+    const form = document.getElementById('setupForm');
+    const radioButtons = document.querySelectorAll('input[name="installType"]');
+    const orgInputContainer = document.getElementById('orgInputContainer');
+    const orgNameInput = document.getElementById('orgName');
+    const orgError = document.getElementById('orgError');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Toggle organization input visibility
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', function () {
+            if (this.value === 'org') {
+                orgInputContainer.classList.add('visible');
+            } else {
+                orgInputContainer.classList.remove('visible');
+                orgError.style.display = 'none';
+            }
+        });
+    });
+
+    // Handle form submission
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const installType = document.querySelector('input[name="installType"]:checked').value;
+        let actionUrl;
+
+        if (installType === 'user') {
+            actionUrl = 'https://github.com/settings/apps/new';
+        } else {
+            const orgName = orgNameInput.value.trim();
+            if (!orgName) {
+                orgError.style.display = 'block';
+                orgNameInput.focus();
+                return;
+            }
+            actionUrl = `https://github.com/organizations/${orgName}/settings/apps/new`;
+        }
+
+        // Update form action and submit
+        form.action = actionUrl;
+        form.submit();
+    });
+
+    // Clear error on input
+    orgNameInput.addEventListener('input', function () {
+        if (this.value.trim()) {
+            orgError.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

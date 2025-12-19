@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/default.css') }}">
+    <title>{{ title }}</title>
+</head>
+
+<body>
+    <nav>
+        <h1>{{ title }}</h1>
+    </nav>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>
+            This is an independent Open Source project.
+            Not affiliated with, endorsed by, or associated with GitHub or Google Cloud.
+        </p>
+    </footer>
+</body>
+
+</html>

@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+
+# Environment variables
+.env
+.env.local
+
+# GitHub App credentials
+github-private-key.pem
+*.pem
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+pytestdebug.log
+htmlcov/
+
+# Terraform
+.terraform.lock.hcl
+.terraform.tfstate.lock.info
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+cloudbuild-container.yaml
+gcp/*.sh
+!gcp/build-container.template.sh
+!gcp/build-image.template.sh
+providers.tf.gcs

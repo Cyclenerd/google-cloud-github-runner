@@ -1,0 +1,38 @@
+{
+	"name": "Cloud Tools Container",
+	"image": "docker.io/cyclenerd/cloud-tools-container:dev",
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"python.defaultInterpreterPath": "/usr/bin/python3",
+				"python.linting.enabled": true,
+				"python.linting.pylintEnabled": true,
+				"python.envFile": "${workspaceFolder}/.env"
+			},
+			"extensions": [
+				"EditorConfig.EditorConfig",
+				"GitLab.gitlab-workflow",
+				"golang.Go",
+				"hashicorp.terraform",
+				"ms-azuretools.vscode-docker",
+				"ms-python.python",
+				"vscode-icons-team.vscode-icons"
+			]
+		}
+	},
+	"remoteEnv": {
+		"PYTHONPATH": "/workspace"
+	},
+	"onCreateCommand": "PATH=$HOME/.local/bin:$PATH && sudo apt update",
+	"postCreateCommand": "figlet 'Cloud Tools' && devcontainer-info",
+	// Podman specific settings
+	"remoteUser": "vscode",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+	"workspaceFolder": "/workspace",
+	"runArgs": [
+		"--userns=keep-id"  // Causes issue with uid mappings on host, which we need for git to work properly - files are owned by random uids due to the uid mapping
+	],
+	"containerEnv": {
+		"HOME": "/home/vscode"
+	}
+}

@@ -1,0 +1,12 @@
+# Google Cloud Build Configuration File
+# https://cloud.google.com/build/docs/build-config-file-schema
+# Terraform managed!
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  script: |
+    docker build -t ${repository_url}/app:latest .
+serviceAccount: ${build_service_account}
+options:
+  logging: CLOUD_LOGGING_ONLY
+images:
+- '${repository_url}/app:latest'

@@ -1,0 +1,6 @@
+---
+minimum_severity: LOW
+exclude:
+  # We are using Google managed keys
+  - google-compute-disk-encryption-customer-key
+  - google-storage-bucket-encryption-customer-key

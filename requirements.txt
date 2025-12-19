@@ -1,0 +1,9 @@
+cryptography==46.0.3
+Flask-Limiter==3.8.0
+Flask==3.1.2
+google-cloud-compute==1.40.0
+google-cloud-secret-manager==2.25.0
+gunicorn==23.0.0
+PyJWT==2.10.1
+python-dotenv==1.0.1
+requests==2.32.5
