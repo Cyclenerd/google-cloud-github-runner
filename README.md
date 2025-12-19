@@ -1,5 +1,10 @@
 # Self-Hosted GitHub Actions Runners for Google Cloud
 
+[![Badge: GitHub](https://img.shields.io/badge/GitHub-181717.svg?logo=github&logoColor=white)](#readme)
+[![Badge: Google Cloud](https://img.shields.io/badge/Google%20Cloud-%234285F4.svg?logo=google-cloud&logoColor=white)](#readme)
+[![Badge: Linux](https://img.shields.io/badge/Linux-FCC624.svg?logo=linux&logoColor=black)](#readme)
+[![Badge: License](https://img.shields.io/github/license/cyclenerd/hcloud-github-runner)](https://github.com/Cyclenerd/google-cloud-github-runner/blob/master/LICENSE)
+
 This application is **exclusively built for Google Cloud Platform (GCP)**, leveraging native services like **Google Compute Engine (GCE) Instance Templates** to manage **ephemeral** just-in-time self-hosted GitHub Actions Runners. Unlike generic solutions that merely "support" GCP, this project offers a deep, cloud-native integration designed specifically for GCP.
 
 For the developer, it functions as a **drop-in replacement**: just add `gcp-` to your GitHub Actions workflow YAML file (e.g., replace `runs-on: ubuntu-latest` with `runs-on: gcp-ubuntu-latest`).
@@ -13,6 +18,12 @@ The architecture prioritizes **simplicity and auditability**, avoiding complex a
 *   **Automatic Setup**: Easy web-based setup to create and configure the GitHub App.
 *   **Secure Configuration**: Automatically stores credentials in Google Secret Manager.
 *   **Cost Effective**: Runners are only active when jobs are queued.
+
+## Video Tutorial
+
+[![Tutorial Video on YouTube](img/youtube.jpeg)](https://www.youtube.com/watch?v=TBCL2Z7ryzA)
+
+Click the image to watch the 3-minute video tutorial.
 
 ## Prerequisites
 
