@@ -1,7 +1,7 @@
 # Artifact Registry for storing the GitHub Actions Runners manager container image
 # https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/blob/v49.1.0/modules/artifact-registry/README.md
 module "artifact-registry-container" {
-  source                 = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v49.1.0"
+  source                 = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v50.0.0"
   project_id             = module.project.project_id
   location               = var.region
   name                   = "container-github-runners-manager"
