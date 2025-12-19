@@ -95,7 +95,8 @@ You can estimate costs using the [Google Cloud Pricing Calculator](https://cloud
 Deploy the entire stack using Terraform:
 
 ```bash
-cd gcp
+git clone "https://github.com/Cyclenerd/google-cloud-github-runner.git"
+cd google-cloud-github-runner/gcp
 export GOOGLE_CLOUD_PROJECT=your-project-id
 terraform init
 terraform apply
@@ -222,7 +223,7 @@ To run the application locally for development or testing:
 
 1.  **Clone the repository**:
     ```bash
-    git clone <your-repo-url>
+    git clone "https://github.com/Cyclenerd/google-cloud-github-runner.git"
     cd google-cloud-github-runner
     ```
 
