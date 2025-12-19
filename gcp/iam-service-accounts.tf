@@ -29,7 +29,7 @@ resource "time_sleep" "wait_for_service_account_compute_vm" {
 
 # Service Account for the Runners Manager (Cloud Run)
 module "service-account-cloud-run-github-runners-manager" {
-  source       = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v49.1.0"
+  source       = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v50.0.0"
   project_id   = module.project.project_id
   name         = "github-runners-manager"
   display_name = "Cloud Run - GitHub Actions Runners manager (Terraform managed)"
