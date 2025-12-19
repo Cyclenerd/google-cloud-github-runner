@@ -39,19 +39,13 @@ gcloud auth application-default set-quota-project "$GOOGLE_CLOUD_PROJECT"
 
 **Crucial Step:** If you are deploying within an organization (e.g., a company account), certain policies might block public access to Cloud Run.
 
-Enable the required service API:
-
-```bash
-gcloud services enable orgpolicy.googleapis.com --project="$GOOGLE_CLOUD_PROJECT" --quiet
-```
-
-Check Ingress (Should allow 'all'):
+Check Ingress (Should be `allowAll: true`):
 
 ```bash
 gcloud org-policies describe "run.allowedIngress" --effective --project="$GOOGLE_CLOUD_PROJECT" --quiet
 ```
 
-Check Domain Sharing (Should 'allowAll'):
+Check Domain Sharing (Should be `allowAll: true`):
 
 ```bash
 gcloud org-policies describe "iam.allowedPolicyMemberDomains" --effective --project="$GOOGLE_CLOUD_PROJECT" --quiet
@@ -61,7 +55,14 @@ If these are restrictive, you may need to ask your Organization Admin to adjust 
 
 ## Step 4: Deploy with Terraform
 
-The `gcp` directory contains the Terraform configuration.
+The Terraform version pre-installed in Google Cloud Shell is too old.
+Install a current Terraform version:
+
+```bash
+curl "https://releases.hashicorp.com/terraform/1.14.3/terraform_1.14.3_linux_amd64.zip" -o "$HOME/terraform.zip"
+unzip "$HOME/terraform.zip" terraform -d "$HOME"
+export PATH="$HOME:$PATH"
+```
 
 Navigate to the `gcp` directory:
 
@@ -95,13 +96,13 @@ You find there a list of all variables and their default values.
 Initialize Terraform:
 
 ```bash
-terraform init
+$HOME/terraform init
 ```
 
 Apply the configuration:
 
 ```bash
-terraform apply
+$HOME/terraform apply
 ```
 
 * Review the plan when prompted.
@@ -142,10 +143,10 @@ Copy `providers.tf.gcs` to `providers.tf` (configured for GCS backend):
 cp providers.tf.gcs providers.tf
 ```
 
-Run `terraform init -migrate-state` to copy your local state to the bucket:
+Run `$HOME/terraform init -migrate-state` to copy your local state to the bucket:
 
 ```bash
-terraform init -migrate-state
+$HOME/terraform init -migrate-state
 ```
 
 ## Done 🎉
