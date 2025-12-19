@@ -2,7 +2,7 @@
 
 # Service Account for GitHub Actions Runners (Compute Engine VMs)
 module "service-account-compute-vm-github-runners" {
-  source       = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v49.1.0"
+  source       = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v50.0.0"
   project_id   = module.project.project_id
   name         = "github-runners"
   display_name = "Compute VM - GitHub Actions Runners (Terraform managed)"
