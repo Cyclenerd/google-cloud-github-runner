@@ -13,6 +13,10 @@ The architecture prioritizes **simplicity and auditability**, avoiding complex a
 
 ## Features
 
+*   **Native Hardware Support**: Easily switch between **x86/64** (Intel, AMD) and **ARM** (Ampere Altra, Google Axion) architectures.
+*   **Flexible Instance Sizes**: Choose the exact CPU and RAM needed for your workload using different GCE machine types.
+*   **Workflows run in VMs, not Containers**: Better isolation and native support for tools that struggle in containerized environments (like Docker-in-Docker or system-level changes).
+*   **No Kubernetes Overhead**: No cluster to manage, no complex operator configuration. Just Terraform and Cloud Run.
 *   **Ephemeral Runners**: Automatically creates and destroys runners for each job.
 *   **Org & Repo Level**: Supports both Organization and Repository level runners.
 *   **Automatic Setup**: Easy web-based setup to create and configure the GitHub App.
