@@ -3,7 +3,11 @@
 [![Badge: GitHub](https://img.shields.io/badge/GitHub-181717.svg?logo=github&logoColor=white)](#readme)
 [![Badge: Google Cloud](https://img.shields.io/badge/Google%20Cloud-%234285F4.svg?logo=google-cloud&logoColor=white)](#readme)
 [![Badge: Linux](https://img.shields.io/badge/Linux-FCC624.svg?logo=linux&logoColor=black)](#readme)
-[![Badge: License](https://img.shields.io/github/license/cyclenerd/hcloud-github-runner)](https://github.com/Cyclenerd/google-cloud-github-runner/blob/master/LICENSE)
+[![Badge: Terraform](https://img.shields.io/badge/Terraform-%235835CC.svg?logo=terraform&logoColor=white)](#readme)
+[![Badge: Python](https://img.shields.io/badge/Python-3670A0?logo=python&logoColor=ffdd54)](#readme)
+[![CI/CD Status](https://github.com/Cyclenerd/google-cloud-github-runner/actions/workflows/ci.yml/badge.svg)](https://github.com/Cyclenerd/google-cloud-github-runner/actions/workflows/ci.yml)
+[![Badge: License](https://img.shields.io/github/license/Cyclenerd/google-cloud-github-runner)](https://github.com/Cyclenerd/google-cloud-github-runner/blob/master/LICENSE)
+
 
 This application is **exclusively built for Google Cloud Platform (GCP)**, leveraging native services like **Google Compute Engine (GCE) Instance Templates** to manage **ephemeral** just-in-time self-hosted GitHub Actions Runners. Unlike generic solutions that merely "support" GCP, this project offers a deep, cloud-native integration designed specifically for GCP.
 
@@ -11,7 +15,7 @@ For the developer, it functions as a **drop-in replacement**: just add `gcp-` to
 
 The architecture prioritizes **simplicity and auditability**, avoiding complex abstractions. All services are configured **regionally**, giving you full control over data sovereignty. This ensures that strictly regional requirements—such as keeping all infrastructure and data within Germany—are easily met.
 
-## Features
+## ✨ Features
 
 *   **Native Hardware Support**: Easily switch between **x86/64** (Intel, AMD) and **ARM** (Ampere Altra, Google Axion) architectures.
 *   **Flexible Instance Sizes**: Choose the exact CPU and RAM needed for your workload using different GCE machine types.
@@ -23,19 +27,25 @@ The architecture prioritizes **simplicity and auditability**, avoiding complex a
 *   **Secure Configuration**: Automatically stores credentials in Google Secret Manager.
 *   **Cost Effective**: Runners are only active when jobs are queued.
 
-## Video Tutorial
+## 📺 Video Tutorial
 
 [![Tutorial Video on YouTube](img/youtube.jpeg)](https://www.youtube.com/watch?v=TBCL2Z7ryzA)
 
 Click the image to watch the 3-minute video tutorial.
 
-## Prerequisites
+## 🚀 Quick Start (10 Minutes)
+
+The fastest way to get started is using **Google Cloud Shell**.
+
+1.  **Open in Cloud Shell**:
+
+    [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.png)](https://shell.cloud.google.com/cloudshell/open?shellonly=true&ephemeral=false&cloudshell_git_repo=https://github.com/Cyclenerd/google-cloud-github-runner&cloudshell_git_branch=master&cloudshell_tutorial=CLOUD_SHELL_TUTORIAL.md)
+2.  **Trust the Repo**: Click "Trust repo" when prompted to enable the tutorial features.
+3.  **Follow the Tutorial**: A step-by-step guide will open directly in your terminal.
+
+## 📋 Prerequisites
 
 All requirements are pre-installed in [Google Cloud Shell](https://shell.cloud.google.com/), making it the recommended environment for deployment.
-*Click "Trust repo" during the first run in Cloud Shell.*
-
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.png)](https://shell.cloud.google.com/cloudshell/open?shellonly=true&ephemeral=false&cloudshell_git_repo=https://github.com/Cyclenerd/google-cloud-github-runner&cloudshell_git_branch=master&cloudshell_tutorial=CLOUD_SHELL_TUTORIAL.md)
-
 
 Alternatively, you can install the tools locally on your machine.
 
@@ -47,7 +57,7 @@ Alternatively, you can install the tools locally on your machine.
 *   **Terraform**: [Download and install](https://developer.hashicorp.com/terraform/downloads), than use for easy Google Cloud services deployment.
 *   **Python 3.14+**: Only needed for local development and changes to the code.
 
-## Cost Control and Predictability
+## ⚠️ Cost Control and Predictability
 
 > [!WARNING]
 > **This project will incur Google Cloud costs.** This application creates and manages Google Compute Engine instances, which generate billable charges. Key cost considerations:
@@ -94,7 +104,7 @@ You can estimate costs using the [Google Cloud Pricing Calculator](https://cloud
 * **Private Networking:** Runners operate within your Google Cloud VPC, allowing secure access to private internal resources or VPN-connected services.
 * **Flexible Storage:** Easily provision high-capacity disks for builds with large dependencies or artifacts, overcoming the storage limitations of GitHub-managed runners.
 
-## Deployment to Google Cloud
+## 🛠️ Deployment to Google Cloud
 
 Deploy the entire stack using Terraform:
 
@@ -113,7 +123,7 @@ terraform apply
 
 For detailed deployment instructions and configuration options, see [gcp/README.md](gcp/README.md).
 
-## Configuration & Setup
+## ⚙️ Configuration & Setup
 
 Complete the setup via the provided web interface:
 
@@ -139,7 +149,7 @@ Complete the setup via the provided web interface:
           - run: echo "Hello from Google Cloud!"
     ```
 
-## Architecture
+## 🏗️ Architecture
 
 ```mermaid
 graph TD
@@ -195,7 +205,7 @@ graph TD
 5.  **Webhook: Job Completed**: Instance deregisters with GitHub and is deleted.
 6.  **Delete Runner Instance (VM)**: App deletes the GCE instance upon `workflow_job.completed`.
 
-## Environment Variables
+## 🔐 Environment Variables
 
 | Variable                  | Description                    | Required                                   |
 |---------------------------|--------------------------------|--------------------------------------------|
@@ -213,7 +223,7 @@ graph TD
 
 *\*One of `GITHUB_PRIVATE_KEY` or `GITHUB_PRIVATE_KEY_PATH` must be set.*
 
-## API Endpoints
+## 📡 API Endpoints
 
 *   `GET /setup/` - Setup interface (requires HTTP Basic Auth: username `cloud`, password is your Project ID)
 *   `GET /setup/callback` - OAuth callback handler (requires HTTP Basic Auth)
@@ -221,7 +231,7 @@ graph TD
 *   `POST /setup/trigger-restart` - Restart application (requires HTTP Basic Auth)
 *   `POST /webhook` - Main GitHub webhook receiver (requires valid GitHub webhook signature)
 
-## Local Development
+## 💻 Local Development
 
 To run the application locally for development or testing:
 
@@ -268,7 +278,7 @@ To run the application locally for development or testing:
     cloudflared tunnel run --token [TOKEN]
     ```
 
-## License
+## 📄 License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
@@ -281,6 +291,6 @@ The favicon was generated using the following graphics from Twitter Twemoji:
 *   **Graphics Source:** [https://github.com/twitter/twemoji/blob/master/assets/svg/1f431.svg](https://github.com/twitter/twemoji/blob/master/assets/svg/1f431.svg)
 *   **Graphics License:** CC-BY 4.0 ([https://creativecommons.org/licenses/by/4.0/](https://creativecommons.org/licenses/by/4.0/))
 
-## Disclaimer
+## ⚖️ Disclaimer
 
 This project is an independent Open Source initiative and is not affiliated with, endorsed by, or associated with GitHub or Google Cloud. All trademarks and registered trademarks are the property of their respective owners.
