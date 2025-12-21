@@ -93,16 +93,7 @@ Google Cloud prices are based on the `us-central1` (Iowa, USA) region using E2 o
 Further savings are possible through Committed Use Discounts (CUD) or Spot VMs.
 For details on default machine types, see [`gcp/README.md`](gcp/README.md).
 
-### Cost Estimation
-
 You can estimate costs using the [Google Cloud Pricing Calculator](https://cloud.google.com/products/calculator) or [gcloud-compute.com](https://gcloud-compute.com/). The minimum monthly cost for the deployed Cloud Run service is approximately $10 USD.
-
-### Customization and Control
-
-* **Full Environment Control:** Customize hardware (CPU, RAM) and software. Use specific Linux OS images, pre-install dependencies, and optimize performance instead of relying on default Ubuntu runners.
-* **ARM Architecture:** Native support for `arm64` workloads (Ampere Altra, Google Axion), enabling builds for non-x86 platforms.
-* **Private Networking:** Runners operate within your Google Cloud VPC, allowing secure access to private internal resources or VPN-connected services.
-* **Flexible Storage:** Easily provision high-capacity disks for builds with large dependencies or artifacts, overcoming the storage limitations of GitHub-managed runners.
 
 ## 🛠️ Deployment to Google Cloud
 
@@ -118,6 +109,10 @@ terraform apply
 
 **What this does:**
 *   **Provisions Identity:** Creates a Service Account with least-privilege permissions (Compute Admin, Secret Manager Admin, Cloud Run Admin).
+*   **Provisions Network:** Creates a VPC and Subnet with Cloud NAT for the runners.
+*   **Custom Images:** Creates two custom Ubuntu images for the runners (one for Intel and one for ARM).
+*   **Instance Templates:** Creates different Google Compute Engine Instance templates for the runners.
+*   **Container Image:** Creates the Container image for the runner manager and stores it in Google Artifact Registry.
 *   **Deploys Service:** Launches the runner manager on Cloud Run.
 *   **Outputs URL:** Displays the `service_url` required for the setup below.
 
