@@ -72,7 +72,7 @@ variable "github_runners_manager_min_instance_count" {
 
   validation {
     condition     = var.github_runners_manager_min_instance_count >= 1
-    error_message = "Maximum instance count must be larger than or equal 1 to avoid GitHub webhook timeout!"
+    error_message = "Minimum instance count must be larger than or equal 1 to avoid GitHub webhook timeout!"
   }
 }
 
