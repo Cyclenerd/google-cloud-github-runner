@@ -11,8 +11,6 @@
 			},
 			"extensions": [
 				"EditorConfig.EditorConfig",
-				"GitLab.gitlab-workflow",
-				"golang.Go",
 				"hashicorp.terraform",
 				"ms-azuretools.vscode-docker",
 				"ms-python.python",
