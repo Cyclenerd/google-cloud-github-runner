@@ -75,7 +75,7 @@ spec:
 > However, in some Google Cloud organizations, mainly those of large companies, these values may have been changed.
 
 ```bash
-gcloud services enable "orgpolicy.googleapis.com"
+gcloud services enable "orgpolicy.googleapis.com" --project="$GOOGLE_CLOUD_PROJECT"
 gcloud org-policies describe "run.allowedIngress" --effective --project="$GOOGLE_CLOUD_PROJECT"
 gcloud org-policies describe "iam.allowedPolicyMemberDomains" --effective --project="$GOOGLE_CLOUD_PROJECT"
 ```
