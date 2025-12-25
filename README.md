@@ -204,7 +204,7 @@ graph TD
 
 | Variable                  | Description                    | Required                                   |
 |---------------------------|--------------------------------|--------------------------------------------|
-| `FLASK_SECRET_KEY`        | Session encryption             | No (generate with `secrets.token_hex(32)`) |
+| `SECRET_KEY`              | Session encryption             | No (generate with `secrets.token_hex(32)`) |
 | `GITHUB_APP_ID`           | GitHub App ID                  | Yes                                        |
 | `GITHUB_INSTALLATION_ID`  | App Installation ID            | Yes                                        |
 | `GITHUB_PRIVATE_KEY_PATH` | Path to App Private Key file   | Yes*                                       |

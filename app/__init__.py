@@ -23,7 +23,7 @@ def create_app():
     app = Flask(__name__, template_folder='templates')
 
     # Configure secret key for sessions
-    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
     # Disable debug mode in production
     app.config['DEBUG'] = False
@@ -34,6 +34,7 @@ def create_app():
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 hour
+    app.config['MAX_CONTENT_LENGTH'] = 64 * 1024  # 64 KB
 
     # Initialize rate limiter
     limiter.init_app(app)
