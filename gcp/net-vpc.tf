@@ -18,7 +18,7 @@ module "vpc-github-runners" {
 # Firewall rules for GitHub Actions Runners
 # https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/v49.1.0/modules/net-vpc-firewall
 module "firewall-github-runners" {
-  source               = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v49.1.0"
+  source               = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v50.0.0"
   project_id           = module.project.project_id
   network              = module.vpc-github-runners.name
   default_rules_config = { disabled = true }
