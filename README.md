@@ -19,7 +19,7 @@ The architecture prioritizes **simplicity and auditability**, avoiding complex a
 
 *   **Native Hardware Support**: Easily switch between **x86/64** (Intel, AMD) and **ARM** (Ampere Altra, Google Axion) architectures.
 *   **Flexible Instance Sizes**: Choose the exact CPU and RAM needed for your workload using different GCE machine types.
-*   **Workflows run in VMs, not Containers**: Better isolation and native support for tools that struggle in containerized environments (like Docker-in-Docker or system-level changes).
+*   **Workflow Jobs run in VMs, not Containers**: Better isolation and native support for tools that struggle in containerized environments (like Docker-in-Docker or system-level changes).
 *   **No Kubernetes Overhead**: No cluster to manage, no complex operator configuration. Just Terraform and Cloud Run.
 *   **Ephemeral Runners**: Automatically creates and destroys runners for each job.
 *   **Org & Repo Level**: Supports both Organization and Repository level runners.
@@ -94,6 +94,15 @@ Further savings are possible through Committed Use Discounts (CUD) or Spot VMs.
 For details on default machine types, see [`gcp/README.md`](gcp/README.md).
 
 You can estimate costs using the [Google Cloud Pricing Calculator](https://cloud.google.com/products/calculator) or [gcloud-compute.com](https://gcloud-compute.com/). The minimum monthly cost for the deployed Cloud Run service is approximately $10 USD.
+
+## 📚 Project Philosophy
+
+This application and project allows you to create **ephemeral** and **isolated** runners for each job.
+The core design principle is **"New Job, New Server"**.
+
+*   **Isolation & Security:** Every job runs in a pristine environment. There is no cross-contamination or security risk from sharing runner instances across different repositories or workflows.
+*   **Lifecycle:** This application manages the full lifecycle of the runner instance: `Create` and `Destroy`.
+*   **Cattle, not Pets:** Servers are disposable resources. Long-running, shared resources or maintaining a pool of persistent server and runner instances is outside the scope of this project.
 
 ## 🛠️ Deployment to Google Cloud
 
