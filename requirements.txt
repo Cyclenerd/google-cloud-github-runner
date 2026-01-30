@@ -1,4 +1,4 @@
-cryptography==46.0.3
+cryptography==46.0.4
 Flask-Limiter==4.1.1
 Flask==3.1.2
 google-cloud-compute==1.42.0
