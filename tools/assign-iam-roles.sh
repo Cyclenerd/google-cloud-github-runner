@@ -36,6 +36,7 @@ ROLES=(
 	"roles/iam.roleViewer"
 	"roles/iam.serviceAccountAdmin"
 	"roles/iam.serviceAccountUser"
+	"roles/logging.admin"
 	"roles/monitoring.admin"
 	"roles/orgpolicy.policyViewer"
 	"roles/resourcemanager.projectIamAdmin"

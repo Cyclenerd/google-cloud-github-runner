@@ -57,6 +57,10 @@ module "cloud_run_github_runners_manager" {
     }
   }
   service_config = {
+    # Disable IAM permission check
+    # There should be no requirement to pass the roles/run.invoker to the IAM block to enable public access.
+    # This allows for the org policy domain restricted sharing org policy remain enabled.
+    invoker_iam_disabled = true
     # Second generation Cloud Run for faster CPU.
     # The first generation with faster cold starts is still too slow for our webhook.
     gen2_execution_environment = true
@@ -68,9 +72,6 @@ module "cloud_run_github_runners_manager" {
   service_account_config = {
     create = false
     email  = module.service-account-cloud-run-github-runners-manager.email
-  }
-  iam = {
-    "roles/run.invoker" = ["allUsers"] # Public
   }
   deletion_protection = false
   depends_on = [

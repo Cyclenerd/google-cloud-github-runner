@@ -45,12 +45,6 @@ Check Ingress (Should be `allowAll: true`):
 gcloud org-policies describe "run.allowedIngress" --effective --project="$GOOGLE_CLOUD_PROJECT" --quiet
 ```
 
-Check Domain Sharing (Should be `allowAll: true`):
-
-```bash
-gcloud org-policies describe "iam.allowedPolicyMemberDomains" --effective --project="$GOOGLE_CLOUD_PROJECT" --quiet
-```
-
 If these are restrictive, you may need to ask your Organization Admin to adjust them or use a project outside the organization. See [gcp/README.md](https://github.com/Cyclenerd/google-cloud-github-runner/blob/master/gcp/README.md) for policy details.
 
 ## Step 4: Deploy with Terraform
@@ -59,7 +53,7 @@ The Terraform version pre-installed in Google Cloud Shell is too old.
 Install a current Terraform version:
 
 ```bash
-curl "https://releases.hashicorp.com/terraform/1.14.3/terraform_1.14.3_linux_amd64.zip" -o "$HOME/terraform.zip"
+curl "https://releases.hashicorp.com/terraform/1.14.5/terraform_1.14.5_linux_amd64.zip" -o "$HOME/terraform.zip"
 unzip "$HOME/terraform.zip" terraform -d "$HOME"
 export PATH="$HOME:$PATH"
 ```
