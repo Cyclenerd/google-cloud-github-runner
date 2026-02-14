@@ -5,9 +5,9 @@ locals {
 }
 
 # Create instance templates for each GitHub Actions runner type
-# https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/blob/v49.1.0/modules/compute-vm/README.md
+# https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/blob/v53.0.0/modules/compute-vm/README.md
 module "github-runners-vm-templates" {
-  source   = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/compute-vm?ref=v49.1.0"
+  source   = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/compute-vm?ref=v53.0.0"
   for_each = local.github_runners_types_map
 
   project_id = module.project.project_id

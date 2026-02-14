@@ -348,9 +348,10 @@ python tools/gce.py delete --instance [INSTANCE_NAME]
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | 7.14.1 |
-| <a name="provider_local"></a> [local](#provider\_local) | 2.6.1 |
+| <a name="provider_google"></a> [google](#provider\_google) | 7.19.0 |
+| <a name="provider_local"></a> [local](#provider\_local) | 2.6.2 |
 | <a name="provider_null"></a> [null](#provider\_null) | 3.2.4 |
+| <a name="provider_time"></a> [time](#provider\_time) | 0.13.1 |
 
 ## Inputs
 
@@ -370,5 +371,5 @@ python tools/gce.py delete --instance [INSTANCE_NAME]
 
 | Name | Description |
 |------|-------------|
-| <a name="output_github_runners_manager_url"></a> [github\_runners\_manager\_url](#output\_github\_runners\_manager\_url) | Service URL of the GitHub Actions Runners manager (Cloud Run) https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/blob/v49.1.0/modules/cloud-run-v2/README.md#outputs |
+| <a name="output_github_runners_manager_url"></a> [github\_runners\_manager\_url](#output\_github\_runners\_manager\_url) | Service URL of the GitHub Actions Runners manager (Cloud Run) https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/blob/v53.0.0/modules/cloud-run-v2/README.md#outputs |
 <!-- END_TF_DOCS -->
