@@ -1,7 +1,7 @@
 cryptography==46.0.3
 Flask-Limiter==4.1.1
 Flask==3.1.2
-google-cloud-compute==1.42.0
+google-cloud-compute==1.43.0
 google-cloud-secret-manager==2.26.0
 gunicorn==24.1.0
 PyJWT==2.10.1
