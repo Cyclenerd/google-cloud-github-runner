@@ -82,11 +82,11 @@ class WebhookService:
             if org_name:
                 # Create GitHub Actions runner instance for organization
                 token = self.github_client.get_registration_token(org_name=org_name)
-                self.gcloud_client.create_runner_instance(token, repo_owner_url, template_name)
+                self.gcloud_client.create_runner_instance(token, repo_owner_url, template_name, repo_name)
             elif repo_name:
                 # Create GitHub Actions runner instance for repository
                 token = self.github_client.get_registration_token(repo_name=repo_name)
-                self.gcloud_client.create_runner_instance(token, repo_url, template_name)
+                self.gcloud_client.create_runner_instance(token, repo_url, template_name, repo_name)
             else:
                 logger.error("Neither repository nor organization found in payload. Ignoring job.")
                 return
