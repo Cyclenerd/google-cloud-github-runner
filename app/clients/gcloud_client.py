@@ -54,7 +54,7 @@ class GCloudClient:
         except Exception:
             return None
 
-    def create_runner_instance(self, registration_token, repo_url, template_name):
+    def create_runner_instance(self, registration_token, repo_url, template_name, instance_label=None):
         """
         Create a new GCE instance for a GitHub Actions runner.
 
@@ -62,6 +62,7 @@ class GCloudClient:
             registration_token (str): The GitHub Actions runner registration token.
             repo_url (str): The URL of the repository or organization.
             template_name (str): The name of the instance template to use.
+            instance_label (str): Label to add to the Instance for Cost Tracking.
 
         Returns:
             str: The name of the created instance.
@@ -80,6 +81,14 @@ class GCloudClient:
         # Set instance name
         instance_resource = compute_v1.Instance()  # google.cloud.compute_v1.types.Instance
         instance_resource.name = instance_name
+
+        if instance_label is not None:
+            owner, repo = instance_label.split("/")
+            instance_resource.labels = {
+                "gha-owner": owner.lower(),
+                "gha-repo": repo.lower(),
+                "gha-runner": template_name
+            }
 
         # Set metadata (startup script) - use shlex.quote to prevent command injection
         startup_script = (
