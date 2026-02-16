@@ -91,7 +91,9 @@ class GCloudClient:
         )
         metadata = compute_v1.Metadata()
         metadata.items = [
-            compute_v1.Items(key="startup-script", value=startup_script)
+            compute_v1.Items(key="startup-script", value=startup_script),
+            compute_v1.Items(key="vmDnsSetting", value="ZonalOnly"),
+            compute_v1.Items(key="block-project-ssh-keys", value="true"),
         ]
         instance_resource.metadata = metadata
 
