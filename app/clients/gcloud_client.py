@@ -74,7 +74,12 @@ class GCloudClient:
                            "Skipping instance creation.")
             return None
 
-        instance_name = f"runner-{uuid.uuid4().hex[:16]}"
+        instance_uuid = uuid.uuid4().hex[:16]
+        if instance_template_resource.name.startswith("dependabot"):
+            instance_name = f"dependabot-{instance_uuid}"
+        else:
+            instance_name = f"runner-{instance_uuid}"
+
         logger.info(f"Creating GCE instance {instance_name} with template {instance_template_resource.self_link}")
 
         # Set instance name
