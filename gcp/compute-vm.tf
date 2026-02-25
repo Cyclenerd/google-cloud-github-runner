@@ -33,9 +33,9 @@ module "github-runners-vm-templates" {
     }
   }
 
-  scheduling {
+  options = {
     instance_termination_action = "DELETE"
-    max_run_duration {
+    max_run_duration = {
       # https://docs.github.com/en/actions/reference/limits#existing-system-limits
       seconds = (86400 * 5) + 300 # Terminate Instance after 5 days, 5 minutes
     }
