@@ -203,6 +203,18 @@ variable "github_runners_types" {
   # Similar to https://docs.github.com/en/enterprise-cloud@latest/actions/reference/runners/larger-runners
   default = [
     {
+      name                        = "dependabot"
+      instance_type               = "e2-medium"
+      vcpu                        = 2
+      memory                      = 4
+      disk_type                   = "pd-ssd"
+      disk_size                   = 50
+      disk_provisioned_iops       = 0
+      disk_provisioned_throughput = 0
+      image                       = "ubuntu-2404-lts-amd64"
+      arch                        = "amd64"
+    },
+    {
       name                        = "gcp-ubuntu-slim"
       instance_type               = "e2-medium"
       vcpu                        = 2
@@ -467,9 +479,9 @@ variable "github_runners_types" {
   validation {
     condition = alltrue([
       for config in var.github_runners_types :
-      can(regex("^gcp-[a-zA-Z0-9-]+$", config.name))
+      can(regex("(^dependabot$|^gcp-[a-zA-Z0-9-]+$)", config.name))
     ])
-    error_message = "All names must start with 'gcp-' and only contain letters, numbers and hyphens."
+    error_message = "All names must start with 'gcp-' or must be named 'dependabot' and only contain letters, numbers and hyphens."
   }
 
   validation {
