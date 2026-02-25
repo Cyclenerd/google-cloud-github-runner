@@ -34,7 +34,8 @@ class TestWebhookService:
         mock_gc_client.create_runner_instance.assert_called_once_with(
             'fake-token',
             'https://github.com/owner/repo',
-            'gcp-ubuntu-24.04'
+            'gcp-ubuntu-24.04',
+            'owner/repo'
         )
 
     @patch('app.services.webhook_service.GCloudClient')
