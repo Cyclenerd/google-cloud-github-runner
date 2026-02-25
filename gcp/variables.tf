@@ -63,8 +63,13 @@ variable "zone" {
 variable "github_runners_internal_cidr" {
   description = "The Internal IP Range used for the GitHub Actions Runners"
   type        = string
-  default     = null
-  nullable    = true
+  default     = "100.64.0.0/16"
+  nullable    = false
+
+  validation {
+    condition     = can(cidrnetmask(var.github_runners_internal_cidr)) && can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", var.github_runners_internal_cidr))
+    error_message = "The value must be a valid IPv4 CIDR range."
+  }
 }
 
 # Minimum number of Cloud Run instances for the GitHub Actions Runners manager application
