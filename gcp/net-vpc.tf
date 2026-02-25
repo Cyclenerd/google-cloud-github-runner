@@ -7,7 +7,7 @@ module "vpc-github-runners" {
   description = "VPC for GitHub Actions Runners (Terraform-managed)"
   subnets = [
     {
-      ip_cidr_range = "100.64.0.0/16" # https://en.wikipedia.org/wiki/Carrier-grade_NAT
+      ip_cidr_range = var.github_runners_internal_cidr
       name          = "subnet-github-runners-${local.region_shortnames[var.region]}"
       region        = var.region
       description   = "Subnet for GitHub Actions Runners in ${var.region} (Terraform-managed)"
