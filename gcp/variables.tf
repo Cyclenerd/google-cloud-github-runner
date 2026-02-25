@@ -163,9 +163,9 @@ variable "github_runners_default_type" {
   validation {
     condition = alltrue([
       for value in values(var.github_runners_default_type) :
-      contains(["pd-ssd", "hyperdisk-balanced"], value.disk_type)
+      contains(["pd-ssd", "pd-balanced", "hyperdisk-balanced"], value.disk_type)
     ])
-    error_message = "Disk type must be either 'pd-ssd' or 'hyperdisk-balanced'."
+    error_message = "Disk type must be either 'pd-ssd', 'pd-balanced' or 'hyperdisk-balanced'."
   }
 
   validation {
@@ -504,9 +504,9 @@ variable "github_runners_types" {
   validation {
     condition = alltrue([
       for config in var.github_runners_types :
-      contains(["pd-ssd", "hyperdisk-balanced"], config.disk_type)
+      contains(["pd-ssd", "pd-balanced", "hyperdisk-balanced"], config.disk_type)
     ])
-    error_message = "Disk type must be either 'pd-ssd' or 'hyperdisk-balanced'."
+    error_message = "Disk type must be either 'pd-ssd', 'pd-balanced' or 'hyperdisk-balanced'."
   }
 
   validation {
