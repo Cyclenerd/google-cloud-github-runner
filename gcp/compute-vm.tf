@@ -33,6 +33,14 @@ module "github-runners-vm-templates" {
     }
   }
 
+  options = {
+    termination_action = "DELETE"
+    # https://docs.github.com/en/actions/reference/limits#existing-system-limits
+    max_run_duration = {
+      seconds = (86400 * 5) + 300 # Terminate Instance after 5 days, 5 minutes
+    }
+  }
+
   service_account = {
     auto_create = false
     email       = module.service-account-compute-vm-github-runners.email
