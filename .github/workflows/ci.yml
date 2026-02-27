@@ -46,7 +46,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: 🏗️ Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
 
       - name: 🔍 Terraform Format
         run: terraform fmt -check -recursive
