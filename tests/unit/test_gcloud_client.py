@@ -86,11 +86,13 @@ class TestGCloudClient:
             'gcp-ubuntu-24.04'
         )
 
-        assert instance_name.startswith('runner-')
+        assert instance_name.startswith('gcp-runner-')
         mock_instance_client.insert.assert_called_once()
 
-        request = mock_instance_client.insert.call_args.kwargs['request']
-        startup_script = request.instance_resource.metadata.items[0].value
+        startup_script = mock_compute.Items.call_args_list[0].kwargs['value']
+        assert startup_script.startswith('cd /actions-runner && ')
+        assert 'sudo -u runner ./config.sh' in startup_script
+        assert 'sudo -u runner ./run.sh' in startup_script
         assert '--runnergroup' not in startup_script
 
     @patch('app.clients.gcloud_client.compute_v1')
@@ -119,8 +121,8 @@ class TestGCloudClient:
             'gcp-ubuntu-24.04'
         )
 
-        request = mock_instance_client.insert.call_args.kwargs['request']
-        startup_script = request.instance_resource.metadata.items[0].value
+        startup_script = mock_compute.Items.call_args_list[0].kwargs['value']
+        assert startup_script.startswith('cd /actions-runner && ')
         assert '--runnergroup platform-runners' in startup_script
 
     @patch('app.clients.gcloud_client.compute_v1')

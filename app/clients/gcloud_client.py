@@ -102,7 +102,8 @@ class GCloudClient:
             runner_group_flag = f" --runnergroup {shlex.quote(self.github_runner_group)}"
 
         startup_script = (
-            f"sudo -u runner /actions-runner/config.sh --url {shlex.quote(repo_url)} "
+            "cd /actions-runner && "
+            f"sudo -u runner ./config.sh --url {shlex.quote(repo_url)} "
             f"--token {shlex.quote(registration_token)} "
             f"--name {shlex.quote(instance_name)} "
             f"--labels {shlex.quote(template_name)} "
@@ -111,7 +112,7 @@ class GCloudClient:
             "--unattended "
             "--no-default-labels "
             "--disableupdate && "
-            "sudo -u runner /actions-runner/run.sh"
+            "sudo -u runner ./run.sh"
         )
         metadata = compute_v1.Metadata()
         metadata.items = [
