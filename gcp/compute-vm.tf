@@ -37,7 +37,7 @@ module "github-runners-vm-templates" {
     termination_action = "DELETE"
     # https://docs.github.com/en/actions/reference/limits#existing-system-limits
     max_run_duration = {
-      seconds = (86400 * 5) + 300 # Terminate Instance after 5 days, 5 minutes
+      seconds = var.github_runners_max_run_duration
     }
   }
 
