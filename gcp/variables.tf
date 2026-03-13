@@ -60,6 +60,13 @@ variable "zone" {
   }
 }
 
+variable "github_runner_group" {
+  description = "GitHub Actions runner group name passed to the Cloud Run service; blank disables --runnergroup"
+  type        = string
+  default     = ""
+  nullable    = false
+}
+
 variable "github_runners_internal_cidr" {
   description = "The Internal IP Range used for the GitHub Actions Runners"
   type        = string
