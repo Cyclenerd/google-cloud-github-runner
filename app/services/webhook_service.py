@@ -104,6 +104,10 @@ class WebhookService:
             logger.warning("Job completed but no runner_name found in payload.")
             return
 
+        if not runner_name.startswith('gcp-runner-'):
+            logger.warning("gcp-runner prefix not found in runner name %s. Ignoring job.", runner_name)
+            return
+
         try:
             self.gcloud_client.delete_runner_instance(runner_name)
         except Exception as e:
