@@ -32,6 +32,7 @@ class TestGCloudClient:
 
         assert client.project_id == 'test-project'
         assert client.zone == 'us-central1-a'
+        assert client.github_runner_group == ''
         assert client.region == 'us-central1'
 
     def test_init_default_zone(self, monkeypatch, mock_compute_clients, mock_gcloud_auth):
@@ -43,6 +44,16 @@ class TestGCloudClient:
 
         assert client.zone == 'us-central1-a'
         assert client.region == 'us-central1'
+
+    def test_init_with_runner_group(self, monkeypatch, mock_compute_clients, mock_gcloud_auth):
+        """Test GCloudClient initialization with runner group."""
+        monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.setenv('GOOGLE_CLOUD_ZONE', 'us-central1-a')
+        monkeypatch.setenv('GITHUB_RUNNER_GROUP', 'platform-runners')
+
+        client = GCloudClient()
+
+        assert client.github_runner_group == 'platform-runners'
 
     def test_init_missing_project_id(self, mock_compute_clients, mock_gcloud_auth):
         """Test GCloudClient initialization with missing project ID."""
@@ -75,8 +86,44 @@ class TestGCloudClient:
             'gcp-ubuntu-24.04'
         )
 
-        assert instance_name.startswith('runner-')
+        assert instance_name.startswith('gcp-runner-')
         mock_instance_client.insert.assert_called_once()
+
+        startup_script = mock_compute.Items.call_args_list[0].kwargs['value']
+        assert startup_script.startswith('cd /actions-runner && ')
+        assert 'sudo -u runner ./config.sh' in startup_script
+        assert 'sudo -u runner ./run.sh' in startup_script
+        assert '--runnergroup' not in startup_script
+
+    @patch('app.clients.gcloud_client.compute_v1')
+    def test_create_runner_instance_with_runner_group(self, mock_compute, monkeypatch, mock_env_vars):
+        """Test creating a runner instance with runner group."""
+        monkeypatch.setenv('GITHUB_RUNNER_GROUP', 'platform-runners')
+
+        mock_instance_client = MagicMock()
+        mock_operation = MagicMock()
+        mock_operation.name = 'operation-123'
+        mock_instance_client.insert.return_value = mock_operation
+        mock_compute.InstancesClient.return_value = mock_instance_client
+
+        mock_templates_client = MagicMock()
+        mock_template = MagicMock()
+        mock_template.name = 'gcp-ubuntu-24-04-12345678901234'
+        mock_template.self_link = ('https://www.googleapis.com/compute/v1/projects/test-project/regions/us-central1/'
+                                   'instanceTemplates/gcp-ubuntu-24-04-12345678901234')
+        mock_templates_client.list.return_value = [mock_template]
+        mock_compute.RegionInstanceTemplatesClient.return_value = mock_templates_client
+
+        client = GCloudClient()
+        client.create_runner_instance(
+            'fake-token-12345678',
+            'https://github.com/owner/repo',
+            'gcp-ubuntu-24.04'
+        )
+
+        startup_script = mock_compute.Items.call_args_list[0].kwargs['value']
+        assert startup_script.startswith('cd /actions-runner && ')
+        assert '--runnergroup platform-runners' in startup_script
 
     @patch('app.clients.gcloud_client.compute_v1')
     def test_create_runner_instance_error(self, mock_compute, mock_env_vars):

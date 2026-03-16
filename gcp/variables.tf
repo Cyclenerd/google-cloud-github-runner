@@ -60,6 +60,13 @@ variable "zone" {
   }
 }
 
+variable "github_runner_group" {
+  description = "GitHub Actions runner group name passed to the Cloud Run service; blank disables --runnergroup"
+  type        = string
+  default     = ""
+  nullable    = false
+}
+
 variable "github_runners_internal_cidr" {
   description = "The Internal IP Range used for the GitHub Actions Runners"
   type        = string
@@ -97,6 +104,18 @@ variable "github_runners_manager_max_instance_count" {
   validation {
     condition     = var.github_runners_manager_max_instance_count >= var.github_runners_manager_min_instance_count
     error_message = "Maximum instance count must be larger than or equal to github_runners_manager_min_instance_count."
+  }
+}
+
+# Maximum runtime for GitHub Actions runner VMs before Compute Engine force-deletes them
+variable "github_runners_max_run_duration" {
+  description = "Maximum runtime in seconds for GitHub Actions runner VMs before termination"
+  type        = number
+  default     = (86400 * 5) + 300
+
+  validation {
+    condition     = var.github_runners_max_run_duration > 0
+    error_message = "Maximum run duration must be greater than 0 seconds."
   }
 }
 

@@ -31,6 +31,7 @@ module "cloud_run_github_runners_manager" {
       env = {
         GOOGLE_CLOUD_PROJECT = var.project_id
         GOOGLE_CLOUD_ZONE    = "${var.region}-${var.zone}"
+        GITHUB_RUNNER_GROUP  = var.github_runner_group
       }
       env_from_key = {
         GITHUB_APP_ID = {
