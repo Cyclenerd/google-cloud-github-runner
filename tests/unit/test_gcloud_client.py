@@ -1,4 +1,5 @@
 import pytest
+import logging
 from unittest.mock import patch, MagicMock
 from app.clients.gcloud_client import GCloudClient
 
@@ -196,3 +197,151 @@ class TestGCloudClient:
 
         assert result is None
         mock_instance_client.insert.assert_not_called()
+
+
+class TestGCloudClientDeliveryIdLogging:
+    """Tests to verify that delivery_id is logged in GCloudClient methods."""
+
+    @patch("app.clients.gcloud_client.compute_v1")
+    def test_create_runner_instance_logs_delivery_id(
+        self, mock_compute, mock_env_vars, caplog
+    ):
+        """Test that delivery_id is logged when creating an instance."""
+        mock_instance_client = MagicMock()
+        mock_operation = MagicMock()
+        mock_operation.name = "operation-123"
+        mock_instance_client.insert.return_value = mock_operation
+        mock_compute.InstancesClient.return_value = mock_instance_client
+
+        mock_templates_client = MagicMock()
+        mock_template = MagicMock()
+        mock_template.name = "gcp-ubuntu-24-04-12345678901234"
+        mock_template.self_link = (
+            "https://www.googleapis.com/compute/v1/projects/test-project/regions/us-central1/"
+            "instanceTemplates/gcp-ubuntu-24-04-12345678901234"
+        )
+        mock_templates_client.list.return_value = [mock_template]
+        mock_compute.RegionInstanceTemplatesClient.return_value = mock_templates_client
+
+        client = GCloudClient()
+
+        with caplog.at_level(logging.INFO, logger="app.clients.gcloud_client"):
+            client.create_runner_instance(
+                "fake-token",
+                "https://github.com/owner/repo",
+                "gcp-ubuntu-24.04",
+                delivery_id="gce-create-delivery-001",
+            )
+
+        delivery_logs = [
+            r for r in caplog.records if "gce-create-delivery-001" in r.message
+        ]
+        assert (
+            len(delivery_logs) >= 2
+        ), "Expected delivery_id in at least 2 log lines (template match + creating + operation)"
+
+    @patch("app.clients.gcloud_client.compute_v1")
+    def test_delete_runner_instance_logs_delivery_id(
+        self, mock_compute, mock_env_vars, caplog
+    ):
+        """Test that delivery_id is logged when deleting an instance."""
+        mock_instance_client = MagicMock()
+        mock_operation = MagicMock()
+        mock_operation.name = "delete-operation-123"
+        mock_instance_client.delete.return_value = mock_operation
+        mock_compute.InstancesClient.return_value = mock_instance_client
+
+        client = GCloudClient()
+
+        with caplog.at_level(logging.INFO, logger="app.clients.gcloud_client"):
+            client.delete_runner_instance(
+                "runner-12345", delivery_id="gce-delete-delivery-001"
+            )
+
+        delivery_logs = [
+            r for r in caplog.records if "gce-delete-delivery-001" in r.message
+        ]
+        assert (
+            len(delivery_logs) >= 2
+        ), "Expected delivery_id in at least 2 log lines (deleting + operation)"
+
+    @patch("app.clients.gcloud_client.compute_v1")
+    def test_create_runner_instance_no_template_logs_delivery_id(
+        self, mock_compute, mock_env_vars, caplog
+    ):
+        """Test that delivery_id is logged when no matching template found."""
+        mock_templates_client = MagicMock()
+        mock_templates_client.list.return_value = []
+        mock_compute.RegionInstanceTemplatesClient.return_value = mock_templates_client
+
+        mock_instance_client = MagicMock()
+        mock_compute.InstancesClient.return_value = mock_instance_client
+
+        client = GCloudClient()
+
+        with caplog.at_level(logging.WARNING, logger="app.clients.gcloud_client"):
+            client.create_runner_instance(
+                "fake-token",
+                "https://github.com/owner/repo",
+                "non-existent",
+                delivery_id="gce-notemplate-delivery-001",
+            )
+
+        assert any(
+            "gce-notemplate-delivery-001" in r.message for r in caplog.records
+        ), "delivery_id not found in warning log for missing template"
+
+    @patch("app.clients.gcloud_client.compute_v1")
+    def test_create_runner_instance_error_logs_delivery_id(
+        self, mock_compute, mock_env_vars, caplog
+    ):
+        """Test that delivery_id is logged when instance creation fails."""
+        mock_instance_client = MagicMock()
+        mock_instance_client.insert.side_effect = Exception("API Error")
+        mock_compute.InstancesClient.return_value = mock_instance_client
+
+        mock_templates_client = MagicMock()
+        mock_template = MagicMock()
+        mock_template.name = "gcp-ubuntu-24-04-12345678901234"
+        mock_template.self_link = (
+            "https://www.googleapis.com/compute/v1/projects/test-project/regions/us-central1/"
+            "instanceTemplates/gcp-ubuntu-24-04-12345678901234"
+        )
+        mock_templates_client.list.return_value = [mock_template]
+        mock_compute.RegionInstanceTemplatesClient.return_value = mock_templates_client
+
+        client = GCloudClient()
+
+        with caplog.at_level(logging.ERROR, logger="app.clients.gcloud_client"):
+            with pytest.raises(Exception, match="API Error"):
+                client.create_runner_instance(
+                    "fake-token",
+                    "https://github.com/owner/repo",
+                    "gcp-ubuntu-24.04",
+                    delivery_id="gce-error-delivery-001",
+                )
+
+        assert any(
+            "gce-error-delivery-001" in r.message for r in caplog.records
+        ), "delivery_id not found in error log on instance creation failure"
+
+    @patch("app.clients.gcloud_client.compute_v1")
+    def test_delete_runner_instance_error_logs_delivery_id(
+        self, mock_compute, mock_env_vars, caplog
+    ):
+        """Test that delivery_id is logged when instance deletion fails."""
+        mock_instance_client = MagicMock()
+        mock_instance_client.delete.side_effect = Exception("Delete Error")
+        mock_compute.InstancesClient.return_value = mock_instance_client
+
+        client = GCloudClient()
+
+        with caplog.at_level(logging.ERROR, logger="app.clients.gcloud_client"):
+            with pytest.raises(Exception, match="Delete Error"):
+                client.delete_runner_instance(
+                    "runner-12345", delivery_id="gce-delerr-delivery-001"
+                )
+
+        assert any(
+            "gce-delerr-delivery-001" in r.message for r in caplog.records
+        ), "delivery_id not found in error log on instance deletion failure"

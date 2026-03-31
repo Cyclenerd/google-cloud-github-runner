@@ -29,7 +29,9 @@ class TestWebhookRoutes:
         assert response.json['status'] == 'success'
         assert response.json['action'] == 'created'
         assert response.json['runner_name'] == 'runner-abc123'
-        mock_service_instance.handle_workflow_job.assert_called_once()
+        mock_service_instance.handle_workflow_job.assert_called_once_with(
+            sample_workflow_job_payload, delivery_id="abc-123-def"
+        )
 
     @patch('app.routes.webhook.verify_github_signature')
     @patch('app.routes.webhook.WebhookService')

@@ -1,4 +1,5 @@
 import pytest
+import logging
 from unittest.mock import patch, MagicMock
 from app.clients.github_client import GitHubClient
 
@@ -152,3 +153,51 @@ class TestGitHubClient:
         client = GitHubClient()
         with pytest.raises(Exception, match="Key error"):
             client._generate_jwt()
+
+
+class TestGitHubClientDeliveryIdLogging:
+    """Tests to verify that delivery_id is logged in GitHubClient methods."""
+
+    @patch("app.clients.github_client.requests.post")
+    @patch.object(GitHubClient, "get_installation_access_token")
+    def test_registration_token_for_repo_logs_delivery_id(
+        self, mock_install_token, mock_post, mock_env_vars, caplog
+    ):
+        """Test that delivery_id is logged when getting a registration token for a repo."""
+        mock_install_token.return_value = "INSTALL_TOKEN"
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"token": "REG_TOKEN"}
+        mock_post.return_value = mock_response
+
+        client = GitHubClient()
+
+        with caplog.at_level(logging.INFO, logger="app.clients.github_client"):
+            client.get_registration_token(
+                repo_name="owner/repo", delivery_id="gh-repo-delivery-001"
+            )
+
+        assert any(
+            "gh-repo-delivery-001" in r.message for r in caplog.records
+        ), "delivery_id not found in log for repo registration token"
+
+    @patch("app.clients.github_client.requests.post")
+    @patch.object(GitHubClient, "get_installation_access_token")
+    def test_registration_token_for_org_logs_delivery_id(
+        self, mock_install_token, mock_post, mock_env_vars, caplog
+    ):
+        """Test that delivery_id is logged when getting a registration token for an org."""
+        mock_install_token.return_value = "INSTALL_TOKEN"
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"token": "ORG_TOKEN"}
+        mock_post.return_value = mock_response
+
+        client = GitHubClient()
+
+        with caplog.at_level(logging.INFO, logger="app.clients.github_client"):
+            client.get_registration_token(
+                org_name="my-org", delivery_id="gh-org-delivery-001"
+            )
+
+        assert any(
+            "gh-org-delivery-001" in r.message for r in caplog.records
+        ), "delivery_id not found in log for org registration token"

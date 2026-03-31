@@ -73,7 +73,7 @@ def handle_workflow_job_event(payload, delivery_id=None):
     """Handle workflow_job event."""
     try:
         webhook_service = WebhookService()
-        result = webhook_service.handle_workflow_job(payload)
+        result = webhook_service.handle_workflow_job(payload, delivery_id=delivery_id)
         logger.info(
             "Webhook processed successfully, action: %s, runner_name: %s, "
             "delivery_id: %s",

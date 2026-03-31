@@ -79,7 +79,7 @@ class GitHubClient:
         # The installation access token will expire after 1 hour.
         return response.json()['token']
 
-    def get_registration_token(self, org_name=None, repo_name=None):
+    def get_registration_token(self, org_name=None, repo_name=None, delivery_id=None):
         """Gets a runner registration token."""
         # https://docs.github.com/en/rest/actions/self-hosted-runners
         token = self.get_installation_access_token()
@@ -90,12 +90,20 @@ class GitHubClient:
         }
         if org_name:
             # GitHub Docs: https://t.ly/dAyGK
-            url = f'https://api.github.com/orgs/{org_name}/actions/runners/registration-token'
-            logger.info(f"Create registration token for organization: {org_name}")
+            url = f"https://api.github.com/orgs/{org_name}/actions/runners/registration-token"
+            logger.info(
+                "Create registration token for organization: %s, delivery_id: %s",
+                org_name,
+                delivery_id,
+            )
         elif repo_name:
             # GitHub Docs: https://t.ly/n0w2a
-            url = f'https://api.github.com/repos/{repo_name}/actions/runners/registration-token'
-            logger.info(f"Create registration token for repository: {repo_name}")
+            url = f"https://api.github.com/repos/{repo_name}/actions/runners/registration-token"
+            logger.info(
+                "Create registration token for repository: %s, delivery_id: %s",
+                repo_name,
+                delivery_id,
+            )
         else:
             raise ValueError("Either org_name or repo_name must be provided")
 
