@@ -54,7 +54,14 @@ class GCloudClient:
         except Exception:
             return None
 
-    def create_runner_instance(self, registration_token, repo_url, template_name, instance_label=None):
+    def create_runner_instance(
+        self,
+        registration_token,
+        repo_url,
+        template_name,
+        instance_label=None,
+        delivery_id=None,
+    ):
         """
         Create a new GCE instance for a GitHub Actions runner.
 
@@ -63,16 +70,26 @@ class GCloudClient:
             repo_url (str): The URL of the repository or organization.
             template_name (str): The name of the instance template to use.
             instance_label (str): Label to add to the Instance for Cost Tracking.
+            delivery_id (str): The GitHub webhook delivery ID for log correlation.
 
         Returns:
             str: The name of the created instance.
         """
         instance_template_resource = self._get_template_name(template_name)
         if instance_template_resource:
-            logger.info(f"Found matching instance template: {instance_template_resource.name}")
+            logger.info(
+                "Found matching instance template: %s, delivery_id: %s",
+                instance_template_resource.name,
+                delivery_id,
+            )
         else:
-            logger.warning(f"No matching instance template found for label '{template_name}' in region {self.region}. "
-                           "Skipping instance creation.")
+            logger.warning(
+                "No matching instance template found for label '%s' in region %s. "
+                "Skipping instance creation. delivery_id: %s",
+                template_name,
+                self.region,
+                delivery_id,
+            )
             return None
 
         instance_uuid = uuid.uuid4().hex[:16]
@@ -81,7 +98,12 @@ class GCloudClient:
         else:
             instance_name = f"runner-{instance_uuid}"
 
-        logger.info(f"Creating GCE instance {instance_name} with template {instance_template_resource.self_link}")
+        logger.info(
+            "Creating GCE instance %s with template %s, delivery_id: %s",
+            instance_name,
+            instance_template_resource.self_link,
+            delivery_id,
+        )
 
         # Set instance name
         instance_resource = compute_v1.Instance()  # google.cloud.compute_v1.types.Instance
@@ -122,30 +144,46 @@ class GCloudClient:
 
         try:
             # https://docs.cloud.google.com/compute/docs/reference/rest/v1/instances/insert
-            operation = self.instance_client.insert(
-                request=request
+            operation = self.instance_client.insert(request=request)
+            logger.info(
+                "Instance creation operation started: %s, delivery_id: %s",
+                operation.name,
+                delivery_id,
             )
-            logger.info(f"Instance creation operation started: {operation.name}")
             return instance_name
         except Exception as e:
-            logger.error(f"Failed to create instance: {e}")
+            logger.error(
+                "Failed to create instance: %s, delivery_id: %s", e, delivery_id
+            )
             raise
 
-    def delete_runner_instance(self, instance_name):
+    def delete_runner_instance(self, instance_name, delivery_id=None):
         """
         Delete a GCE instance.
 
         Args:
             instance_name (str): The name of the instance to delete.
+            delivery_id (str): The GitHub webhook delivery ID for log correlation.
         """
-        logger.info(f"Deleting GCE instance {instance_name}")
+        logger.info(
+            "Deleting GCE instance %s, delivery_id: %s", instance_name, delivery_id
+        )
         try:
             operation = self.instance_client.delete(
                 project=self.project_id,
                 zone=self.zone,
                 instance=instance_name
             )
-            logger.info(f"Instance deletion operation started: {operation.name}")
+            logger.info(
+                "Instance deletion operation started: %s, delivery_id: %s",
+                operation.name,
+                delivery_id,
+            )
         except Exception as e:
-            logger.error(f"Failed to delete instance {instance_name}: {e}")
+            logger.error(
+                "Failed to delete instance %s: %s, delivery_id: %s",
+                instance_name,
+                e,
+                delivery_id,
+            )
             raise
