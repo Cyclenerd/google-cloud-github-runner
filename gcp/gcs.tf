@@ -2,7 +2,7 @@
 
 # GCS bucket for storing Terraform state
 module "gcs-github-runners-iac" {
-  source        = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v53.0.0"
+  source        = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v55.3.0"
   project_id    = module.project.project_id
   prefix        = module.project.project_id
   name          = "gh-iac-${local.region_shortnames[var.region]}"
