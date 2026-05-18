@@ -92,6 +92,8 @@ class GCloudClient:
             )
             return None
 
+        # Name must start with a lowercase letter followed by up to 62 lowercase letters,
+        # numbers, or hyphens, and cannot end with a hyphen.
         instance_uuid = uuid.uuid4().hex[:16]
         if instance_template_resource.name.startswith("dependabot"):
             instance_name = f"dependabot-{instance_uuid}"
