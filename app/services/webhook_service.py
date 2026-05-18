@@ -177,6 +177,15 @@ class WebhookService:
             )
             return None
 
+        if not runner_name.startswith('gcp-runner-'):
+            logger.warning(
+                "gcp-runner prefix not found in runner name %s. Ignoring job. "
+                "delivery_id: %s",
+                runner_name,
+                delivery_id,
+            )
+            return None
+
         try:
             self.gcloud_client.delete_runner_instance(
                 runner_name, delivery_id=delivery_id

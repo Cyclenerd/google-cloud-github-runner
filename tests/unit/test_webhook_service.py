@@ -125,7 +125,7 @@ class TestWebhookService:
         payload = {
             'action': 'completed',
             'workflow_job': {
-                'runner_name': 'runner-12345'
+                'runner_name': 'gcp-runner-12345'
             }
         }
 
@@ -133,9 +133,9 @@ class TestWebhookService:
             payload, delivery_id="delivery-completed-001"
         )
 
-        assert result == {"action": "deleted", "runner_name": "runner-12345"}
+        assert result == {"action": "deleted", "runner_name": "gcp-runner-12345"}
         mock_gc_client.delete_runner_instance.assert_called_once_with(
-            'runner-12345', delivery_id="delivery-completed-001"
+            'gcp-runner-12345', delivery_id="delivery-completed-001"
         )
 
     @patch('app.services.webhook_service.GCloudClient')
@@ -157,6 +157,32 @@ class TestWebhookService:
 
         result = service.handle_workflow_job(
             payload, delivery_id="delivery-norunner-001"
+        )
+
+        assert result == {"action": "deleted", "runner_name": None}
+        mock_gc_client.delete_runner_instance.assert_not_called()
+
+    @patch('app.services.webhook_service.GCloudClient')
+    @patch('app.services.webhook_service.GitHubClient')
+    def test_handle_completed_job_ignores_non_gcp_runner(
+        self, mock_gh_client_class, mock_gc_client_class
+    ):
+        """Test handling completed job for a non-GCP runner."""
+        mock_gh_client_class.return_value = Mock()
+        mock_gc_client = Mock()
+        mock_gc_client_class.return_value = mock_gc_client
+
+        service = WebhookService()
+
+        payload = {
+            'action': 'completed',
+            'workflow_job': {
+                'runner_name': 'runner-12345'
+            }
+        }
+
+        result = service.handle_workflow_job(
+            payload, delivery_id="delivery-nongcp-001"
         )
 
         assert result == {"action": "deleted", "runner_name": None}
@@ -230,16 +256,16 @@ class TestWebhookService:
         payload = {
             'action': 'completed',
             'workflow_job': {
-                'runner_name': 'runner-12345'
+                'runner_name': 'gcp-runner-12345'
             }
         }
 
         # Should not raise exception, just log error and return runner_name
         result = service.handle_workflow_job(payload, delivery_id="delivery-delerr-001")
 
-        assert result == {"action": "deleted", "runner_name": "runner-12345"}
+        assert result == {"action": "deleted", "runner_name": "gcp-runner-12345"}
         mock_gc_client.delete_runner_instance.assert_called_once_with(
-            'runner-12345', delivery_id="delivery-delerr-001"
+            'gcp-runner-12345', delivery_id="delivery-delerr-001"
         )
 
 
@@ -297,7 +323,7 @@ class TestWebhookServiceDeliveryIdLogging:
 
         payload = {
             "action": "completed",
-            "workflow_job": {"runner_name": "runner-12345"},
+            "workflow_job": {"runner_name": "gcp-runner-12345"},
         }
 
         with caplog.at_level(logging.INFO, logger="app.services.webhook_service"):
