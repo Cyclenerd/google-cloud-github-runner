@@ -112,13 +112,13 @@ class TestWebhookService:
         payload = {
             'action': 'completed',
             'workflow_job': {
-                'runner_name': 'runner-12345'
+                'runner_name': 'gcp-runner-12345'
             }
         }
 
         service.handle_workflow_job(payload)
 
-        mock_gc_client.delete_runner_instance.assert_called_once_with('runner-12345')
+        mock_gc_client.delete_runner_instance.assert_called_once_with('gcp-runner-12345')
 
     @patch('app.services.webhook_service.GCloudClient')
     @patch('app.services.webhook_service.GitHubClient')
@@ -208,11 +208,11 @@ class TestWebhookService:
         payload = {
             'action': 'completed',
             'workflow_job': {
-                'runner_name': 'runner-12345'
+                'runner_name': 'gcp-runner-12345'
             }
         }
 
         # Should not raise exception, just log error
         service.handle_workflow_job(payload)
 
-        mock_gc_client.delete_runner_instance.assert_called_once_with('runner-12345')
+        mock_gc_client.delete_runner_instance.assert_called_once_with('gcp-runner-12345')
