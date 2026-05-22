@@ -1,7 +1,7 @@
 # VPC for GitHub Actions Runners
 # https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/blob/v53.0.0/modules/net-vpc/README.md
 module "vpc-github-runners" {
-  source      = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v53.0.0"
+  source      = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v56.0.0"
   project_id  = module.project.project_id
   name        = "vpc-github-runners"
   description = "VPC for GitHub Actions Runners (Terraform-managed)"
