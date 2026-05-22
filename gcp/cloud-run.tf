@@ -13,7 +13,7 @@ data "google_artifact_registry_docker_image" "container-image-github-runners-man
 # Deploy the GitHub Actions Runners manager service on Cloud Run
 # https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/blob/v53.0.0/modules/cloud-run-v2/README.md
 module "cloud_run_github_runners_manager" {
-  source     = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/cloud-run-v2?ref=v53.0.0"
+  source     = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/cloud-run-v2?ref=v56.0.0"
   project_id = module.project.project_id
   name       = "github-runners-manager-${local.region_shortnames[var.region]}"
   type       = "SERVICE"
