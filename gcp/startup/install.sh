@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2025 Nils Knieling. All Rights Reserved.
+# Copyright 2025-2026 Nils Knieling. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -117,9 +117,6 @@ sudo mkdir -p "$MY_RUNNER_DIR"
 cd "$MY_RUNNER_DIR"
 sudo curl -fsSL -O "https://github.com/actions/runner/releases/download/v${MY_RUNNER_VERSION}/actions-runner-linux-${MY_ARCH}-${MY_RUNNER_VERSION}.tar.gz"
 sudo tar xzf "actions-runner-linux-${MY_ARCH}-${MY_RUNNER_VERSION}.tar.gz"
-
-# Patch for Ubuntu 24.04 (https://github.com/actions/runner/issues/3150)
-sudo sed -i 's/libicu72/libicu72 libicu74/' ./bin/installdependencies.sh
 
 # Run the installation script
 sudo ./bin/installdependencies.sh
