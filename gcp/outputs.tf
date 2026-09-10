@@ -31,6 +31,13 @@ resource "null_resource" "build-github-runners-manager-container" {
     script_hash     = sha256(local_file.cloudbuild-github-runners-manager-script.content)
     config_hash     = sha256(local_file.cloudbuild-github-runners-manager-config.content)
     dockerfile_hash = sha256(file("${path.module}/../Dockerfile"))
+    # Rebuild when the application itself changes, not only the Dockerfile: otherwise a
+    # `terraform apply` after a code change ships new env vars with the old image.
+    source_hash = sha256(join("", concat(
+      [for f in sort(fileset("${path.module}/../app", "**/*.py")) : filesha256("${path.module}/../app/${f}")],
+      [for f in sort(fileset("${path.module}/../app/templates", "**")) : filesha256("${path.module}/../app/templates/${f}")],
+      [filesha256("${path.module}/../requirements.txt"), filesha256("${path.module}/../run.py")],
+    )))
   }
 
   provisioner "local-exec" {

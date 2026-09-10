@@ -1,0 +1,56 @@
+{
+  "endTime": "2026-09-09T09:25:13.494-07:00",
+  "error": {
+    "errors": [
+      {
+        "code": "ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS",
+        "errorDetails": [
+          {
+            "help": {
+              "links": [
+                {
+                  "description": "Troubleshooting documentation",
+                  "url": "https://cloud.google.com/compute/docs/resource-error"
+                }
+              ]
+            }
+          },
+          {
+            "localizedMessage": {
+              "locale": "en-US",
+              "message": "A n4-standard-16 VM instance is currently unavailable in the us-central1-b zone. Try requesting the VM in another zone. For more information, view the troubleshooting documentation."
+            }
+          },
+          {
+            "errorInfo": {
+              "domain": "compute.googleapis.com",
+              "metadatas": {
+                "attachment": "",
+                "vmType": "n4-standard-16",
+                "zone": "us-central1-b",
+                "zonesAvailable": ""
+              },
+              "reason": "stockout"
+            }
+          }
+        ],
+        "message": "The zone 'projects/example-project/zones/us-central1-b' does not have enough resources available to fulfill the request.  '(resource type:compute)'."
+      }
+    ]
+  },
+  "httpErrorMessage": "SERVICE UNAVAILABLE",
+  "httpErrorStatusCode": 503,
+  "id": "6512920674469426829",
+  "insertTime": "2026-09-09T09:25:06.277-07:00",
+  "kind": "compute#operation",
+  "name": "operation-1788971105121-65b0f4b3bf527-ccfe4d74-0caad51b",
+  "operationType": "insert",
+  "progress": 100,
+  "selfLink": "https://www.googleapis.com/compute/v1/projects/example-project/zones/us-central1-b/operations/operation-1788971105121-65b0f4b3bf527-ccfe4d74-0caad51b",
+  "startTime": "2026-09-09T09:25:06.319-07:00",
+  "status": "DONE",
+  "targetId": "9029886846977193614",
+  "targetLink": "https://www.googleapis.com/compute/v1/projects/example-project/zones/us-central1-b/instances/gcp-runner-e72cd281d8714b2d",
+  "user": "github-runners-manager@example-project.iam.gserviceaccount.com",
+  "zone": "https://www.googleapis.com/compute/v1/projects/example-project/zones/us-central1-b"
+}

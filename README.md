@@ -209,6 +209,50 @@ graph TD
 5.  **Webhook: Job Completed**: Instance deregisters with GitHub and is deleted.
 6.  **Delete Runner Instance (VM)**: App deletes the GCE instance upon `workflow_job.completed`.
 
+Instance creation waits for the Compute Engine operation and reports its result: capacity errors
+(stockout, quota) fall back to the other zones of the region, in a stable order, before failing loudly.
+The zone a VM landed in is stored in the `gha-zone` label and deletion looks the VM up by name across zones.
+
+### 📬 Cloud Tasks between webhook and VM
+
+With `PROVISION_QUEUE` configured (Terraform does this), the webhook does not create the VM inline: it
+verifies the signature, enqueues one Cloud Tasks task named after the job id and answers GitHub at once.
+A redelivery of the same job collides on the task name and is ignored. Cloud Tasks then calls
+`POST /tasks/provision` (OIDC token of the provisioner service account) which re-checks that the job is
+still queued and has no live VM, and creates it through the same path (operation wait, zone fallback). A capacity error answers `503` so the queue retries with backoff (30 s to 5 min, 8
+attempts by default); a task that exhausts its attempts is left to the reconciler, never dropped.
+Without a queue the webhook creates inline, which takes about 10 seconds (more with zone fallback) and
+exceeds GitHub's 10-second delivery timeout; the VM is still created and a failed insert is a `500`
+plus an ERROR log, never a silent success.
+
+### 🔁 Reconciler
+
+Webhooks are best effort. A dropped delivery leaves a job queued with no VM, a runner that never
+registers leaves a VM with no job, and a job cancelled while queued never produces a `completed` event.
+Cloud Scheduler therefore calls `POST /reconcile` every few minutes (OIDC-authenticated). One pass:
+
+*   lists the queued jobs on `gcp-*` labels of every repository the GitHub App is installed on (enumerated
+    from the installation each pass, no list to maintain; archived and disabled repositories are skipped and
+    `RECONCILE_EXCLUDE_REPOSITORIES` can drop some, whose VMs are then also left alone), and
+    the live runner VMs (label `gha-job-id`);
+*   creates a VM for a job queued longer than `RECONCILE_STUCK_MINUTES` with no VM (same path as the webhook);
+*   deletes a VM older than `RECONCILE_STUCK_MINUTES` whose job is not running (never registered, or finished
+    without the `completed` event), removing the runner from GitHub first so it cannot pick up a job meanwhile;
+*   never deletes a VM that GitHub reports as running a job (by runner name or busy flag).
+
+Every decision is logged with job id, VM name, zone and reason. `POST /reconcile?dry_run=1` reports without acting.
+The reconciler never gives up on a queued job: after `RECONCILE_SLOW_RETRY_HOURS` it retries at most every
+`RECONCILE_SLOW_RETRY_MINUTES` and logs a WARNING per pass (GitHub's 24-hour queued-job timeout is the only floor).
+Every completed pass writes a structured heartbeat line (`event=reconcile_heartbeat`, marker `RECONCILE_HEARTBEAT`)
+carrying `oldest_queued_job_age_seconds`; the monitoring alerts in `gcp/monitoring.tf` read it.
+
+### 🚨 Alerts
+
+Two Cloud Monitoring alert policies (Terraform, no notification channels attached) watch the heartbeat through
+log-based metrics: **reconciler heartbeat missing** (no completed pass for 15 minutes) and **job queued too long
+without a runner** (`oldest_queued_job_age_seconds` above 30 minutes). `tools/alert-drill.sh` feeds a synthetic
+value or pauses the scheduler to prove each one fires.
+
 ## 🔐 Environment Variables
 
 | Variable                  | Description                    | Required                                   |
@@ -220,7 +264,19 @@ graph TD
 | `GITHUB_PRIVATE_KEY`      | App Private Key content        | Yes*                                       |
 | `GITHUB_WEBHOOK_SECRET`   | Webhook signature secret       | Yes                                        |
 | `GOOGLE_CLOUD_PROJECT`    | Google Cloud Project ID        | Yes                                        |
-| `GOOGLE_CLOUD_ZONE`       | Default GCP zone for runners   | No (default: `us-central1-a`)              |
+| `GOOGLE_CLOUD_ZONE`       | Preferred GCP zone for runners; other zones of the region are tried on capacity errors | No (default: `us-central1-a`) |
+| `GCE_INSERT_TIMEOUT_SECONDS` | Max. seconds to wait for a VM insert operation | No (default: `120`)                     |
+| `RECONCILE_INVOKER_EMAIL` | Service account allowed to call `/reconcile` | No (route disabled when unset)            |
+| `RECONCILE_AUDIENCE`      | OIDC audience expected on `/reconcile` calls | No (route disabled when unset)            |
+| `RECONCILE_STUCK_MINUTES` | Age after which the reconciler creates or deletes | No (default: `10`)                   |
+| `RECONCILE_MAX_CREATES`   | Max. VMs one reconcile pass creates | No (default: `20`)                                |
+| `RECONCILE_EXCLUDE_REPOSITORIES` | Comma-separated `owner/repo` list the reconciler neither provisions for nor cleans up; every other installed repo is scanned | No (default: none) |
+| `RECONCILE_SLOW_RETRY_HOURS` | Jobs queued longer than this are retried at a reduced rate (never dropped) | No (default: `6`) |
+| `RECONCILE_SLOW_RETRY_MINUTES` | Interval between attempts for such jobs | No (default: `60`)                         |
+| `RECONCILE_INTERVAL_MINUTES` | Minutes between passes (matches the scheduler) | No (default: `5`)                      |
+| `MANAGER_URL`             | Public URL of this service; OIDC audience for `/tasks/provision` | No (route disabled when unset) |
+| `PROVISION_QUEUE`         | Cloud Tasks queue path (`projects/../locations/../queues/..`) for webhook hand-off | No (inline creation when unset) |
+| `PROVISION_INVOKER_EMAIL` | Service account Cloud Tasks uses to call `/tasks/provision` | No (route disabled when unset)      |
 | `PORT`                    | Web server port                | No (default: `8080`)                       |
 | `SETUP_USERNAME`          | Setup authentication username  | No (default: `cloud`)                      |
 | `SETUP_PASSWORD`          | Setup authentication password  | No (default: `GOOGLE_CLOUD_PROJECT`)       |
@@ -234,6 +290,8 @@ graph TD
 *   `GET /setup/complete` - Post-installation handler (requires HTTP Basic Auth)
 *   `POST /setup/trigger-restart` - Restart application (requires HTTP Basic Auth)
 *   `POST /webhook` - Main GitHub webhook receiver (requires valid GitHub webhook signature)
+*   `POST /reconcile` - Reconcile queued jobs with runner VMs (requires a Google OIDC token for `RECONCILE_INVOKER_EMAIL`)
+*   `POST /tasks/provision` - Cloud Tasks handler that creates one job's VM (requires a Google OIDC token for `PROVISION_INVOKER_EMAIL`)
 
 ## 💻 Local Development
 

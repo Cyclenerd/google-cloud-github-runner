@@ -4,6 +4,16 @@ from unittest.mock import patch, MagicMock
 from app.clients.gcloud_client import GCloudClient
 
 
+def _aggregated_list_with(instance_name, zone='us-central1-a'):
+    """aggregated_list result placing ``instance_name`` in ``zone`` (delete looks instances up by name)."""
+    instance = MagicMock()
+    instance.name = instance_name
+    instance.zone = f'https://www.googleapis.com/compute/v1/projects/test-project/zones/{zone}'
+    scoped = MagicMock()
+    scoped.instances = [instance]
+    return [(f'zones/{zone}', scoped)]
+
+
 @pytest.fixture
 def mock_env_vars(monkeypatch):
     """Set up mock environment variables for GCloud client."""
@@ -158,6 +168,7 @@ class TestGCloudClient:
         mock_operation = MagicMock()
         mock_operation.name = 'delete-operation-123'
         mock_instance_client.delete.return_value = mock_operation
+        mock_instance_client.aggregated_list.return_value = _aggregated_list_with('runner-12345')
         mock_compute.InstancesClient.return_value = mock_instance_client
 
         client = GCloudClient()
@@ -174,6 +185,7 @@ class TestGCloudClient:
         """Test error handling when deleting instance fails."""
         mock_instance_client = MagicMock()
         mock_instance_client.delete.side_effect = Exception("Delete Error")
+        mock_instance_client.aggregated_list.return_value = _aggregated_list_with('runner-12345')
         mock_compute.InstancesClient.return_value = mock_instance_client
 
         client = GCloudClient()
@@ -296,6 +308,7 @@ class TestGCloudClientDeliveryIdLogging:
         mock_operation = MagicMock()
         mock_operation.name = "delete-operation-123"
         mock_instance_client.delete.return_value = mock_operation
+        mock_instance_client.aggregated_list.return_value = _aggregated_list_with("runner-12345")
         mock_compute.InstancesClient.return_value = mock_instance_client
 
         client = GCloudClient()
@@ -379,6 +392,7 @@ class TestGCloudClientDeliveryIdLogging:
         """Test that delivery_id is logged when instance deletion fails."""
         mock_instance_client = MagicMock()
         mock_instance_client.delete.side_effect = Exception("Delete Error")
+        mock_instance_client.aggregated_list.return_value = _aggregated_list_with("runner-12345")
         mock_compute.InstancesClient.return_value = mock_instance_client
 
         client = GCloudClient()

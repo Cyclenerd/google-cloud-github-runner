@@ -11,7 +11,8 @@ This document provides a high-level overview of the `google-cloud-github-runner`
 ### 1. Flask Application (`app/`)
 The core logic resides in a Flask web application.
 - **Webhook Handler (`app/routes/webhook.py`)**: Receives `workflow_job` events from GitHub.
-- **Webhook Service (`app/services/webhook_service.py.py`)**: Orchestrates the runner creation process.
+- **Webhook Service (`app/services/webhook_service.py`)**: Orchestrates the runner creation process.
+- **Reconcile Service (`app/services/reconcile_service.py`)**: Periodic pass (Cloud Scheduler -> `POST /reconcile`) that creates VMs for stuck queued jobs and deletes VMs whose job is not running.
 - **GCloud Client (`app/clients/gcloud_client.py`)**: Interacts with Google Cloud APIs to create and delete instances.
 - **GitHub Client (`app/clients/github_client.py`)**: Interacts with GitHub APIs to generate registration tokens and manage runners.
 
@@ -25,14 +26,15 @@ The infrastructure is managed via Terraform.
 ## Workflows
 
 ### Runner Creation Flow
-1. **Webhook**: GitHub sends a `workflow_job.queued` event to the Flask app.
+1. **Webhook**: GitHub sends a `workflow_job.queued` event to the Flask app. With a Cloud Tasks queue configured the app enqueues one task per job (named by job id) and answers at once; the task calls `POST /tasks/provision`, which does steps 3-4.
 2. **Validation**: The app validates the webhook signature and checks if the job labels match a supported runner template.
 3. **Token Generation**: The app requests a runner registration token from GitHub.
-4. **Instance Creation**: The app creates a GCE instance using a startup script that installs the GitHub runner agent and registers it with the token.
+4. **Instance Creation**: The app creates a GCE instance using a startup script that installs the GitHub runner agent and registers it with the token. It waits for the insert operation; capacity errors fall back to the other zones of the region.
 
 ### Runner Cleanup Flow
 - **Ephemeral Runners**: The runners are configured to be ephemeral (run once and terminate).
-- **GCE Deletion**: GitHub sends a `workflow_job.completed` event to the Flask app. The GCE instance with the runner ID is deleted.
+- **GCE Deletion**: GitHub sends a `workflow_job.completed` event to the Flask app. The GCE instance with the runner ID is deleted (looked up by name across zones).
+- **Reconciler**: Cloud Scheduler calls `POST /reconcile` every few minutes; stuck queued jobs get a VM, VMs whose job is not running are deleted (runner deregistered first), VMs running a job are never deleted.
 
 ## Directory Structure
 

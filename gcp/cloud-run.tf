@@ -15,7 +15,7 @@ data "google_artifact_registry_docker_image" "container-image-github-runners-man
 module "cloud_run_github_runners_manager" {
   source     = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/cloud-run-v2?ref=v53.0.0"
   project_id = module.project.project_id
-  name       = "github-runners-manager-${local.region_shortnames[var.region]}"
+  name       = local.github_runners_manager_name
   type       = "SERVICE"
   region     = var.region
   containers = {
@@ -32,6 +32,18 @@ module "cloud_run_github_runners_manager" {
         GOOGLE_CLOUD_PROJECT = var.project_id
         GOOGLE_CLOUD_ZONE    = "${var.region}-${var.zone}"
         GITHUB_RUNNER_GROUP  = var.github_runner_group
+        # Reconciler (POST /reconcile) is only accepted from this caller with this audience
+        RECONCILE_INVOKER_EMAIL        = module.service-account-github-runners-reconciler.email
+        RECONCILE_AUDIENCE             = local.github_runners_manager_audience
+        RECONCILE_STUCK_MINUTES        = tostring(var.github_runners_reconcile_stuck_minutes)
+        RECONCILE_EXCLUDE_REPOSITORIES = join(",", var.github_runners_reconcile_exclude_repositories)
+        RECONCILE_SLOW_RETRY_HOURS     = tostring(var.github_runners_reconcile_slow_retry_hours)
+        RECONCILE_SLOW_RETRY_MINUTES   = tostring(var.github_runners_reconcile_slow_retry_minutes)
+        RECONCILE_INTERVAL_MINUTES     = tostring(local.github_runners_reconcile_interval_minutes)
+        # Webhook -> Cloud Tasks -> POST /tasks/provision (only this caller, with MANAGER_URL as audience)
+        PROVISION_QUEUE         = google_cloud_tasks_queue.github-runners-provision.id
+        PROVISION_INVOKER_EMAIL = module.service-account-github-runners-provisioner.email
+        MANAGER_URL             = local.github_runners_manager_audience
       }
       env_from_key = {
         GITHUB_APP_ID = {
@@ -58,6 +70,11 @@ module "cloud_run_github_runners_manager" {
     }
   }
   service_config = {
+    # A provisioning task may wait for several Compute insert operations across zones and ladder
+    # rungs (Cloud Tasks dispatch deadline 30 min); keep the request timeout at or above it.
+    timeout = "${max(var.github_runners_manager_request_timeout, var.github_runners_reconcile_attempt_deadline)}s"
+    # Matches gunicorn's thread count (Dockerfile): webhook requests block on the insert operation.
+    max_concurrency = 32
     # Disable IAM permission check
     # There should be no requirement to pass the roles/run.invoker to the IAM block to enable public access.
     # This allows for the org policy domain restricted sharing org policy remain enabled.
@@ -77,6 +94,8 @@ module "cloud_run_github_runners_manager" {
   deletion_protection = false
   depends_on = [
     google_secret_manager_secret_version.secret-version-default,
-    time_sleep.wait_for_service_account_cloud_run
+    time_sleep.wait_for_service_account_cloud_run,
+    time_sleep.wait_for_service_account_reconciler,
+    time_sleep.wait_for_service_account_provisioner
   ]
 }
