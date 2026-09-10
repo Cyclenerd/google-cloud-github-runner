@@ -6,9 +6,12 @@ variable "apis" {
     "artifactregistry.googleapis.com",
     "cloudbuild.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "cloudscheduler.googleapis.com",
+    "cloudtasks.googleapis.com",
     "compute.googleapis.com",
     "iam.googleapis.com",
     "logging.googleapis.com",
+    "monitoring.googleapis.com",
     "orgpolicy.googleapis.com",
     "run.googleapis.com",
     "secretmanager.googleapis.com",
@@ -99,11 +102,180 @@ variable "github_runners_manager_min_instance_count" {
 variable "github_runners_manager_max_instance_count" {
   description = "GitHub Actions Runners manager app maximum instance count (Max. number of Cloud Run instances)"
   type        = number
-  default     = 1
+  default     = 10
 
   validation {
     condition     = var.github_runners_manager_max_instance_count >= var.github_runners_manager_min_instance_count
     error_message = "Maximum instance count must be larger than or equal to github_runners_manager_min_instance_count."
+  }
+}
+
+# HTTP Basic Auth credentials for the /setup pages, stored in Secret Manager and mounted on the service
+variable "github_runners_manager_setup_username" {
+  description = "Username for the GitHub Actions Runners manager /setup pages (stored in Secret Manager)"
+  type        = string
+  nullable    = false
+
+  validation {
+    condition     = length(var.github_runners_manager_setup_username) >= 3
+    error_message = "Setup username must be at least 3 characters."
+  }
+}
+
+variable "github_runners_manager_setup_password" {
+  description = "Password for the GitHub Actions Runners manager /setup pages (stored in Secret Manager)"
+  type        = string
+  sensitive   = true
+  nullable    = false
+
+  validation {
+    condition     = length(var.github_runners_manager_setup_password) >= 12
+    error_message = "Setup password must be at least 12 characters."
+  }
+}
+
+# Cloud Tasks queue that carries webhook -> VM creation
+variable "github_runners_provision_max_dispatches_per_second" {
+  description = "Cloud Tasks dispatch rate for runner provisioning (tasks started per second)"
+  type        = number
+  default     = 5
+
+  validation {
+    condition     = var.github_runners_provision_max_dispatches_per_second > 0 && var.github_runners_provision_max_dispatches_per_second <= 500
+    error_message = "Dispatch rate must be between 0 and 500."
+  }
+}
+
+variable "github_runners_provision_max_concurrent_dispatches" {
+  description = "Cloud Tasks concurrent provisioning tasks in flight (each blocks on one Compute insert operation)"
+  type        = number
+  default     = 20
+
+  validation {
+    condition     = var.github_runners_provision_max_concurrent_dispatches >= 1 && var.github_runners_provision_max_concurrent_dispatches <= 1000
+    error_message = "Concurrent dispatches must be between 1 and 1000."
+  }
+}
+
+variable "github_runners_provision_max_attempts" {
+  description = "Cloud Tasks attempts per provisioning task before it is left to the reconciler (30 s to 300 s backoff)"
+  type        = number
+  default     = 8
+
+  validation {
+    condition     = var.github_runners_provision_max_attempts >= 1 && var.github_runners_provision_max_attempts <= 100
+    error_message = "Max attempts must be between 1 and 100."
+  }
+}
+
+# Cron schedule for the reconciler that creates VMs for stuck queued jobs and deletes idle runner VMs
+variable "github_runners_reconcile_schedule" {
+  description = "Cloud Scheduler cron schedule (UTC) for the reconcile pass of the GitHub Actions Runners manager; must be of the form */N * * * *"
+  type        = string
+  default     = "*/5 * * * *"
+  nullable    = false
+
+  validation {
+    # The reconciler gates reduced-rate retries on the pass interval, which is read from this shape.
+    condition     = can(regex("^\\*/([1-9]|[1-5][0-9]) \\* \\* \\* \\*$", var.github_runners_reconcile_schedule))
+    error_message = "Schedule must be '*/N * * * *' with N between 1 and 59 minutes."
+  }
+}
+
+# A queued job without a VM, or a VM whose job is not running, is acted on after this many minutes
+variable "github_runners_reconcile_stuck_minutes" {
+  description = "Minutes a queued job may wait without a VM (or a VM may exist without a running job) before the reconciler acts"
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.github_runners_reconcile_stuck_minutes >= 3
+    error_message = "Stuck minutes must be at least 3 so freshly created runners have time to register."
+  }
+}
+
+# After this many hours queued, a job is retried at a reduced rate (never dropped)
+variable "github_runners_reconcile_slow_retry_hours" {
+  description = "Hours after which the reconciler retries a still-queued job only every slow-retry interval instead of every pass"
+  type        = number
+  default     = 6
+
+  validation {
+    condition     = var.github_runners_reconcile_slow_retry_hours >= 1 && var.github_runners_reconcile_slow_retry_hours <= 24
+    error_message = "Slow-retry hours must be between 1 and 24 (GitHub cancels queued jobs after 24 h)."
+  }
+}
+
+variable "github_runners_reconcile_slow_retry_minutes" {
+  description = "Interval in minutes between provisioning attempts for jobs queued longer than the slow-retry hours"
+  type        = number
+  default     = 60
+
+  validation {
+    condition     = var.github_runners_reconcile_slow_retry_minutes >= 5 && var.github_runners_reconcile_slow_retry_minutes <= 1440
+    error_message = "Slow-retry minutes must be between 5 and 1440."
+  }
+}
+
+# Alert thresholds (policies only; notification channels are configured separately)
+variable "github_runners_alert_heartbeat_missing_seconds" {
+  description = "Alert when no reconcile pass has completed for this many seconds"
+  type        = number
+  default     = 900
+
+  validation {
+    condition     = var.github_runners_alert_heartbeat_missing_seconds >= 300
+    error_message = "Heartbeat alert window must be at least 300 seconds (one scheduler interval)."
+  }
+}
+
+variable "github_runners_alert_stuck_job_seconds" {
+  description = "Alert when a queued job has waited for a runner longer than this many seconds"
+  type        = number
+  default     = 1800
+
+  validation {
+    condition     = var.github_runners_alert_stuck_job_seconds >= 60
+    error_message = "Stuck-job alert threshold must be at least 60 seconds."
+  }
+}
+
+# Repositories the reconciler must ignore (owner/repo). There is deliberately no include list:
+# every repository the GitHub App is installed on is covered without configuration.
+variable "github_runners_reconcile_exclude_repositories" {
+  description = "Repositories (owner/repo) the reconciler neither provisions for nor cleans up; every other repository of the GitHub App installation is scanned"
+  type        = list(string)
+  default     = []
+  nullable    = false
+
+  validation {
+    condition     = alltrue([for repo in var.github_runners_reconcile_exclude_repositories : can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", repo))])
+    error_message = "Repositories must be given as owner/repo."
+  }
+}
+
+# Cloud Run request timeout of the manager; must cover a provisioning task (Cloud Tasks dispatch
+# deadline, 30 min) and a reconcile pass
+variable "github_runners_manager_request_timeout" {
+  description = "Cloud Run request timeout in seconds for the GitHub Actions Runners manager (covers the longest provisioning task)"
+  type        = number
+  default     = 1800
+
+  validation {
+    condition     = var.github_runners_manager_request_timeout >= 60 && var.github_runners_manager_request_timeout <= 3600
+    error_message = "Request timeout must be between 60 and 3600 seconds."
+  }
+}
+
+# Upper bound for one reconcile pass; creations block on the Compute insert operation and zone fallback
+variable "github_runners_reconcile_attempt_deadline" {
+  description = "Cloud Scheduler attempt deadline in seconds for one reconcile pass (max. 1800)"
+  type        = number
+  default     = 600
+
+  validation {
+    condition     = var.github_runners_reconcile_attempt_deadline >= 60 && var.github_runners_reconcile_attempt_deadline <= 1800
+    error_message = "Attempt deadline must be between 60 and 1800 seconds."
   }
 }
 
@@ -216,7 +388,24 @@ variable "github_runners_default_type" {
   }
 }
 
-# List of GitHub Actions runner configurations with instance specs
+# Name prefix of the templates the gcp-auto-<tier>-<cores> ladder walks (<prefix>-<rung>-<timestamp>)
+variable "github_runners_auto_template_prefix" {
+  description = "Template name prefix for the gcp-auto failover ladder rungs (<prefix>-compute-16, <prefix>-general-2, ...)"
+  type        = string
+  default     = "gcp-ubuntu-24-04"
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9-]*[a-z0-9]$", var.github_runners_auto_template_prefix))
+    error_message = "Prefix must be lowercase letters, digits and hyphens."
+  }
+}
+
+# List of GitHub Actions runner configurations with instance specs.
+# Deployment-specific choices (dropping the ARM entries to skip the ARM image build, adding the
+# templates your workflows target, or removing types you do not need) belong in terraform.tfvars
+# (gitignored; see terraform.tfvars.example), not in these defaults: an override replaces the whole
+# list, and the gcp-auto ladder rungs below must stay in it (the validation refuses a list without them).
 variable "github_runners_types" {
   description = "GitHub Actions Runners instance types for different CPU architectures"
   type = list(object({
@@ -377,6 +566,105 @@ variable "github_runners_types" {
       image                       = "ubuntu-2404-lts-amd64"
       arch                        = "amd64"
     },
+    # Rungs of the gcp-auto-<tier>-<cores> failover ladder (see app/utils/auto_label.py):
+    # compute: c4-16 > e2-16 > c4-8 > e2-8 > c4-4 > e2-4 > c4-2 > e2-2, general: e2-16 > e2-8 > e2-4 > e2-2.
+    # 25 GB disks for 2 and 4 cores, 100 GB for 8 and 16; c4 needs hyperdisk-balanced.
+    {
+      name                        = "gcp-ubuntu-24-04-compute-16"
+      instance_type               = "c4-standard-16"
+      vcpu                        = 16
+      memory                      = 60
+      disk_type                   = "hyperdisk-balanced"
+      disk_size                   = 100
+      disk_provisioned_iops       = 3600
+      disk_provisioned_throughput = 290
+      image                       = "ubuntu-2404-lts-amd64"
+      arch                        = "amd64"
+    },
+    {
+      name                        = "gcp-ubuntu-24-04-compute-8"
+      instance_type               = "c4-standard-8"
+      vcpu                        = 8
+      memory                      = 30
+      disk_type                   = "hyperdisk-balanced"
+      disk_size                   = 100
+      disk_provisioned_iops       = 3600
+      disk_provisioned_throughput = 290
+      image                       = "ubuntu-2404-lts-amd64"
+      arch                        = "amd64"
+    },
+    {
+      name                        = "gcp-ubuntu-24-04-compute-4"
+      instance_type               = "c4-standard-4"
+      vcpu                        = 4
+      memory                      = 15
+      disk_type                   = "hyperdisk-balanced"
+      disk_size                   = 25
+      disk_provisioned_iops       = 3600
+      disk_provisioned_throughput = 290
+      image                       = "ubuntu-2404-lts-amd64"
+      arch                        = "amd64"
+    },
+    {
+      name                        = "gcp-ubuntu-24-04-compute-2"
+      instance_type               = "c4-standard-2"
+      vcpu                        = 2
+      memory                      = 7.5
+      disk_type                   = "hyperdisk-balanced"
+      disk_size                   = 25
+      disk_provisioned_iops       = 3600
+      disk_provisioned_throughput = 290
+      image                       = "ubuntu-2404-lts-amd64"
+      arch                        = "amd64"
+    },
+    {
+      name                        = "gcp-ubuntu-24-04-general-16"
+      instance_type               = "e2-standard-16"
+      vcpu                        = 16
+      memory                      = 64
+      disk_type                   = "pd-ssd"
+      disk_size                   = 100
+      disk_provisioned_iops       = 0
+      disk_provisioned_throughput = 0
+      image                       = "ubuntu-2404-lts-amd64"
+      arch                        = "amd64"
+    },
+    {
+      name                        = "gcp-ubuntu-24-04-general-8"
+      instance_type               = "e2-standard-8"
+      vcpu                        = 8
+      memory                      = 32
+      disk_type                   = "pd-ssd"
+      disk_size                   = 100
+      disk_provisioned_iops       = 0
+      disk_provisioned_throughput = 0
+      image                       = "ubuntu-2404-lts-amd64"
+      arch                        = "amd64"
+    },
+    {
+      name                        = "gcp-ubuntu-24-04-general-4"
+      instance_type               = "e2-standard-4"
+      vcpu                        = 4
+      memory                      = 16
+      disk_type                   = "pd-ssd"
+      disk_size                   = 25
+      disk_provisioned_iops       = 0
+      disk_provisioned_throughput = 0
+      image                       = "ubuntu-2404-lts-amd64"
+      arch                        = "amd64"
+    },
+    {
+      name                        = "gcp-ubuntu-24-04-general-2"
+      instance_type               = "e2-standard-2"
+      vcpu                        = 2
+      memory                      = 8
+      disk_type                   = "pd-ssd"
+      disk_size                   = 25
+      disk_provisioned_iops       = 0
+      disk_provisioned_throughput = 0
+      image                       = "ubuntu-2404-lts-amd64"
+      arch                        = "amd64"
+    },
     {
       name                        = "gcp-ubuntu-slim-arm"
       instance_type               = "c4a-standard-1"
@@ -498,6 +786,15 @@ variable "github_runners_types" {
       arch                        = "arm64"
     },
   ]
+
+  validation {
+    # Every rung of the gcp-auto ladder needs a prebuilt template named <auto prefix>-<rung>.
+    condition = alltrue([
+      for rung in ["compute-16", "compute-8", "compute-4", "compute-2", "general-16", "general-8", "general-4", "general-2"] :
+      contains([for config in var.github_runners_types : config.name], "${var.github_runners_auto_template_prefix}-${rung}")
+    ])
+    error_message = "github_runners_types must contain a template for every gcp-auto ladder rung (<github_runners_auto_template_prefix>-<compute|general>-<16|8|4|2>)."
+  }
 
   validation {
     condition = alltrue([

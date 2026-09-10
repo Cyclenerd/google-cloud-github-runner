@@ -39,3 +39,4 @@ Example:
 ```bash
 ./gce.py delete --instance runner-a1b2c3d4
 ```
+* `alert-drill.sh` : Exercise the two alert policies (synthetic stuck-job heartbeat, paused scheduler). Cloud mutations; run with approval.

@@ -38,10 +38,13 @@ ENV PORT=8080
 # Configure Gunicorn server arguments for production
 # --bind: Bind to all network interfaces on the specified port
 # --workers: Number of worker processes
-# --threads: Number of threads per worker
+# --threads: Number of threads per worker. Provisioning requests (Cloud Tasks handler, or the
+#            webhook without a queue) wait for the Compute insert operation (about 10 s, more
+#            with zone fallback), so a burst of queued jobs needs many concurrent, I/O-bound
+#            requests in flight.
 # --timeout: Timeout for worker processes
 # Source: https://cloud.google.com/run/docs/tips/python#optimize_gunicorn
-ENV GUNICORN_CMD_ARGS="--bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 0"
+ENV GUNICORN_CMD_ARGS="--bind 0.0.0.0:$PORT --workers 1 --threads 32 --timeout 0"
 
 # Configure Flask application settings
 # FLASK_ENV: Set the environment to production

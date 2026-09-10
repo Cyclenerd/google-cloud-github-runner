@@ -133,9 +133,10 @@ Complete the setup via the provided web interface:
 
 1.  **Access Setup:** Navigate to `service_url` (from Terraform output).
     
-    **Authentication Required:** All `/setup` routes are protected with HTTP Basic Authentication:
-    - **Username:** `cloud`
-    - **Password:** Your Google Cloud Project ID (value of `GOOGLE_CLOUD_PROJECT`)
+    **Authentication Required:** All `/setup` routes are protected with HTTP Basic Authentication.
+    The username and password are the Terraform variables `github_runners_manager_setup_username` and
+    `github_runners_manager_setup_password`; Terraform stores them in Secret Manager (`setup-username`,
+    `setup-password`) and mounts them on the service. Without them the setup pages refuse every login.
 2.  **Create & Install:** Click **Setup GitHub App**, then install it on your target Organization or Repository.
 3.  **Auto-Configuration:** The system handles the rest automatically:
     *   **Secure Storage:** Saves the Private Key to Secret Manager.
@@ -209,6 +210,79 @@ graph TD
 5.  **Webhook: Job Completed**: Instance deregisters with GitHub and is deleted.
 6.  **Delete Runner Instance (VM)**: App deletes the GCE instance upon `workflow_job.completed`.
 
+Instance creation waits for the Compute Engine operation and reports its result: capacity errors
+(stockout, quota) fall back to the other zones of the region, in a stable order, before failing loudly.
+The zone a VM landed in is stored in the `gha-zone` label and deletion looks the VM up by name across zones.
+
+### 📬 Cloud Tasks between webhook and VM
+
+With `PROVISION_QUEUE` configured (Terraform does this), the webhook does not create the VM inline: it
+verifies the signature, enqueues one Cloud Tasks task named after the job id and answers GitHub at once.
+A redelivery of the same job collides on the task name and is ignored. Cloud Tasks then calls
+`POST /tasks/provision` (OIDC token of the provisioner service account) which re-checks that the job is
+still queued and has no live VM, and creates it through the same path (operation wait, zone fallback,
+`gcp-auto` ladder). A capacity error answers `503` so the queue retries with backoff (30 s to 5 min, 8
+attempts by default); a task that exhausts its attempts is left to the reconciler, never dropped.
+Without a queue the webhook creates inline, which takes about 10 seconds (more with zone fallback) and
+exceeds GitHub's 10-second delivery timeout; the VM is still created and a failed insert is a `500`
+plus an ERROR log, never a silent success.
+
+### 🎚️ Auto-failover labels
+
+Beside an explicit template label, a job may request a machine class with
+`runs-on: gcp-auto-<tier>-<cores>[-min<N>]` (tier `compute` or `general`, cores 16/8/4/2, optional floor,
+default `min2`). The manager walks a ladder of prebuilt templates until one zone of the region has capacity:
+
+*   compute: c4-16 > e2-16 > c4-8 > e2-8 > c4-4 > e2-4 > c4-2 > e2-2 (compute may downgrade into general)
+*   general: e2-16 > e2-8 > e2-4 > e2-2 (general never tries compute)
+
+Order is rung → every zone → next rung. Below the floor the manager fails loudly (ERROR log naming every rung,
+zone and operation error code) instead of landing on a smaller machine. The landed rung and zone are stored in
+the `gha-rung` and `gha-zone` instance labels and printed into the job log
+(`gcp-auto: requested compute-16, landed general-16 in us-central1-b`). The templates are the
+`gcp-ubuntu-24-04-<rung>` entries of `github_runners_types` in Terraform (`github_runners_auto_template_prefix`).
+Explicit labels are unaffected.
+
+Worst case for one request is every rung times every zone (8 rungs × 4 zones × about 7 s per stockout, roughly
+4 minutes) before the loud failure, and a reconcile pass runs up to `RECONCILE_MAX_CREATES` of those (shared round-robin across repositories, oldest job first within each) through
+`RECONCILE_CREATE_WORKERS` workers inside the Cloud Run request timeout; lower the cap when auto labels are common.
+
+### 🔁 Reconciler
+
+Webhooks are best effort. A dropped delivery leaves a job queued with no VM, a runner that never
+registers leaves a VM with no job, and a job cancelled while queued never produces a `completed` event.
+Cloud Scheduler therefore calls `POST /reconcile` every few minutes (OIDC-authenticated). One pass:
+
+*   lists the queued jobs on `gcp-*` labels of every repository the GitHub App is installed on (enumerated
+    from the installation each pass, no list to maintain; archived and disabled repositories are skipped and
+    `RECONCILE_EXCLUDE_REPOSITORIES` can drop some, whose VMs are then also left alone), and
+    the live runner VMs (label `gha-job-id`);
+*   creates a VM for a job queued longer than `RECONCILE_STUCK_MINUTES` with no VM (same path as the webhook);
+*   deletes a VM older than `RECONCILE_STUCK_MINUTES` whose job is not running (never registered, or finished
+    without the `completed` event), removing the runner from GitHub first so it cannot pick up a job meanwhile;
+*   never deletes a VM that GitHub reports as running a job (by runner name or busy flag).
+
+Every decision is logged with job id, VM name, zone and reason. `POST /reconcile?dry_run=1` reports without acting.
+The reconciler never gives up on a queued job: after `RECONCILE_SLOW_RETRY_HOURS` it retries at most every
+`RECONCILE_SLOW_RETRY_MINUTES` and logs a WARNING per pass (GitHub's 24-hour queued-job timeout is the only floor).
+Every completed pass writes a structured heartbeat line (`event=reconcile_heartbeat`, marker `RECONCILE_HEARTBEAT`)
+carrying `oldest_queued_job_age_seconds`; the monitoring alerts in `gcp/monitoring.tf` read it.
+
+### 🚨 Alerts
+
+Two Cloud Monitoring alert policies (Terraform, no notification channels attached) watch the heartbeat through
+log-based metrics: **reconciler heartbeat missing** (no completed pass for 15 minutes) and **job queued too long
+without a runner** (`oldest_queued_job_age_seconds` above 30 minutes). `tools/alert-drill.sh` feeds a synthetic
+value or pauses the scheduler to prove each one fires.
+
+### ⚡ Preemption notice
+
+Runner VMs built from `gcp/startup/install.sh` long-poll the metadata server's `preempted` flag and also hook the
+ACPI shutdown. When a Spot VM is reclaimed (or shut down while its runner is still working) it POSTs to
+`/runner/preempted` with its service-account OIDC token; the manager takes the instance identity from the token,
+logs the event at WARNING with job id, runner name and zone, and labels the instance `gha-preempted=true`.
+No automatic re-run happens yet.
+
 ## 🔐 Environment Variables
 
 | Variable                  | Description                    | Required                                   |
@@ -220,20 +294,37 @@ graph TD
 | `GITHUB_PRIVATE_KEY`      | App Private Key content        | Yes*                                       |
 | `GITHUB_WEBHOOK_SECRET`   | Webhook signature secret       | Yes                                        |
 | `GOOGLE_CLOUD_PROJECT`    | Google Cloud Project ID        | Yes                                        |
-| `GOOGLE_CLOUD_ZONE`       | Default GCP zone for runners   | No (default: `us-central1-a`)              |
+| `GOOGLE_CLOUD_ZONE`       | Preferred GCP zone for runners; other zones of the region are tried on capacity errors | No (default: `us-central1-a`) |
+| `AUTO_TEMPLATE_PREFIX`    | Template name prefix of the `gcp-auto` ladder rungs | No (default: `gcp-ubuntu-24-04`)                  |
+| `GCE_INSERT_TIMEOUT_SECONDS` | Max. seconds to wait for a VM insert operation | No (default: `120`)                     |
+| `RECONCILE_INVOKER_EMAIL` | Service account allowed to call `/reconcile` | No (route disabled when unset)            |
+| `RECONCILE_AUDIENCE`      | OIDC audience expected on `/reconcile` calls | No (route disabled when unset)            |
+| `RECONCILE_STUCK_MINUTES` | Age after which the reconciler creates or deletes | No (default: `10`)                   |
+| `RECONCILE_MAX_CREATES`   | Max. VMs one reconcile pass creates | No (default: `20`)                                |
+| `RECONCILE_EXCLUDE_REPOSITORIES` | Comma-separated `owner/repo` list the reconciler neither provisions for nor cleans up; every other installed repo is scanned | No (default: none) |
+| `RECONCILE_SLOW_RETRY_HOURS` | Jobs queued longer than this are retried at a reduced rate (never dropped) | No (default: `6`) |
+| `RECONCILE_SLOW_RETRY_MINUTES` | Interval between attempts for such jobs | No (default: `60`)                         |
+| `RECONCILE_INTERVAL_MINUTES` | Minutes between passes (matches the scheduler) | No (default: `5`)                      |
+| `MANAGER_URL`             | Public URL of this service; stamped into VM metadata, OIDC audience for `/runner/preempted` and `/tasks/provision` | No (routes disabled when unset) |
+| `PROVISION_QUEUE`         | Cloud Tasks queue path (`projects/../locations/../queues/..`) for webhook hand-off | No (inline creation when unset) |
+| `PROVISION_INVOKER_EMAIL` | Service account Cloud Tasks uses to call `/tasks/provision` | No (route disabled when unset)      |
+| `RUNNER_SERVICE_ACCOUNT_EMAIL` | Service account of the runner VMs allowed to call `/runner/preempted` | No (route disabled when unset) |
 | `PORT`                    | Web server port                | No (default: `8080`)                       |
-| `SETUP_USERNAME`          | Setup authentication username  | No (default: `cloud`)                      |
-| `SETUP_PASSWORD`          | Setup authentication password  | No (default: `GOOGLE_CLOUD_PROJECT`)       |
+| `SETUP_USERNAME`          | Setup authentication username  | Yes for `/setup` (no default; from Secret Manager) |
+| `SETUP_PASSWORD`          | Setup authentication password  | Yes for `/setup` (no default; from Secret Manager) |
 
 *\*One of `GITHUB_PRIVATE_KEY` or `GITHUB_PRIVATE_KEY_PATH` must be set.*
 
 ## 📡 API Endpoints
 
-*   `GET /setup/` - Setup interface (requires HTTP Basic Auth: username `cloud`, password is your Project ID)
+*   `GET /setup/` - Setup interface (requires HTTP Basic Auth: `SETUP_USERNAME` / `SETUP_PASSWORD`)
 *   `GET /setup/callback` - OAuth callback handler (requires HTTP Basic Auth)
 *   `GET /setup/complete` - Post-installation handler (requires HTTP Basic Auth)
 *   `POST /setup/trigger-restart` - Restart application (requires HTTP Basic Auth)
 *   `POST /webhook` - Main GitHub webhook receiver (requires valid GitHub webhook signature)
+*   `POST /reconcile` - Reconcile queued jobs with runner VMs (requires a Google OIDC token for `RECONCILE_INVOKER_EMAIL`)
+*   `POST /runner/preempted` - A runner VM reports a Spot preemption (requires the VM service account's OIDC token, `format=full`)
+*   `POST /tasks/provision` - Cloud Tasks handler that creates one job's VM (requires a Google OIDC token for `PROVISION_INVOKER_EMAIL`)
 
 ## 💻 Local Development
 

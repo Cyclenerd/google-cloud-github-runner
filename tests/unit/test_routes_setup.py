@@ -2,7 +2,7 @@ from unittest.mock import patch
 import base64
 
 
-def make_basic_auth_headers(username='cloud', password='test-project'):
+def make_basic_auth_headers(username='setup-admin', password='correct-horse-battery'):
     """Create HTTP Basic Auth headers."""
     credentials = base64.b64encode(f'{username}:{password}'.encode()).decode()
     return {'Authorization': f'Basic {credentials}'}
@@ -13,6 +13,8 @@ class TestSetupRoutes:
     def test_setup_page_loads(self, mock_config_service, client, monkeypatch):
         """Test that setup page loads successfully."""
         monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+        monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
         mock_config_instance = mock_config_service.return_value
         mock_config_instance.is_configured.return_value = {
             'is_configured': False,
@@ -32,6 +34,8 @@ class TestSetupRoutes:
     def test_setup_callback_success(self, mock_config_service, mock_exchange, mock_get_installation_url, client, monkeypatch):
         """Test successful setup callback."""
         monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+        monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
         mock_exchange.return_value = {
             'id': 12345,
             'pem': 'FAKE_PEM',
@@ -61,6 +65,8 @@ class TestSetupRoutes:
     def test_setup_callback_no_code(self, mock_config_service, client, monkeypatch):
         """Test setup callback without code parameter."""
         monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+        monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
         mock_config_instance = mock_config_service.return_value
         mock_config_instance.is_configured.return_value = {
             'is_configured': False,
@@ -78,6 +84,8 @@ class TestSetupRoutes:
     def test_setup_complete(self, mock_config_service, client, monkeypatch):
         """Test setup complete endpoint."""
         monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+        monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
         mock_config_instance = mock_config_service.return_value
         mock_config_instance.is_configured.return_value = {
             'is_configured': False,
@@ -97,6 +105,8 @@ class TestSetupRoutes:
     def test_setup_complete_no_installation_id(self, mock_config_service, client, monkeypatch):
         """Test setup complete without installation_id."""
         monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+        monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
         mock_config_instance = mock_config_service.return_value
         mock_config_instance.is_configured.return_value = {
             'is_configured': False,
@@ -114,6 +124,8 @@ class TestSetupRoutes:
     def test_setup_page_already_configured(self, mock_config_service, client, monkeypatch):
         """Test that setup page redirects when already configured."""
         monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+        monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
         mock_config_instance = mock_config_service.return_value
         mock_config_instance.is_configured.return_value = {
             'is_configured': True,
@@ -132,6 +144,8 @@ class TestSetupRoutes:
     def test_setup_callback_already_configured(self, mock_config_service, mock_exchange, client, monkeypatch):
         """Test that setup callback blocks when already configured."""
         monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+        monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
         mock_config_instance = mock_config_service.return_value
         mock_config_instance.is_configured.return_value = {
             'is_configured': True,
@@ -151,6 +165,8 @@ class TestSetupRoutes:
     def test_setup_callback_store_config_error(self, mock_config_service, mock_exchange, client, monkeypatch):
         """Test setup callback when storing config fails."""
         monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+        monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
         mock_exchange.return_value = {
             'id': 12345,
             'pem': 'FAKE_PEM',
@@ -178,6 +194,8 @@ class TestSetupRoutes:
     def test_setup_callback_no_app_slug(self, mock_config_service, mock_exchange, mock_get_url, client, monkeypatch):
         """Test setup callback when app slug is missing."""
         monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+        monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
         mock_exchange.return_value = {
             'id': 12345,
             'pem': 'FAKE_PEM',
@@ -203,6 +221,8 @@ class TestSetupRoutes:
     def test_setup_callback_exchange_error(self, mock_config_service, mock_exchange, client, monkeypatch):
         """Test setup callback when code exchange fails."""
         monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+        monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
         mock_exchange.side_effect = Exception("Exchange failed")
 
         mock_config_instance = mock_config_service.return_value
@@ -221,6 +241,8 @@ class TestSetupRoutes:
     def test_setup_complete_store_error(self, mock_config_service, client, monkeypatch):
         """Test setup complete when storing installation_id fails."""
         monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+        monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
         mock_config_instance = mock_config_service.return_value
         mock_config_instance.is_configured.return_value = {
             'is_configured': False,
@@ -239,6 +261,8 @@ class TestSetupRoutes:
     def test_trigger_restart(self, mock_config_service, mock_exit, client, monkeypatch):
         """Test trigger_restart endpoint."""
         monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+        monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
         mock_config_instance = mock_config_service.return_value
         # Set to False so before_request doesn't block
         mock_config_instance.is_configured.return_value = {
@@ -257,3 +281,18 @@ class TestSetupRoutes:
             pass
 
         mock_exit.assert_called_once_with(1)
+
+
+class TestSetupAuthFailsClosed:
+    def test_setup_is_refused_when_credentials_are_not_configured(self, client, monkeypatch):
+        monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+        monkeypatch.delenv('SETUP_USERNAME', raising=False)
+        monkeypatch.delenv('SETUP_PASSWORD', raising=False)
+        # the old implicit defaults (cloud / project id) must not work any more
+        assert client.get('/setup/', headers=make_basic_auth_headers('cloud', 'test-project')).status_code == 401
+        assert client.get('/setup/', headers=make_basic_auth_headers('', '')).status_code == 401
+
+    def test_wrong_password_is_refused(self, client, monkeypatch):
+        monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+        monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
+        assert client.get('/setup/', headers=make_basic_auth_headers('setup-admin', 'nope')).status_code == 401

@@ -7,6 +7,8 @@ from app import create_app
 def setup_test_env(monkeypatch):
     """Set up test environment variables."""
     monkeypatch.setenv('GOOGLE_CLOUD_PROJECT', 'test-project')
+    monkeypatch.setenv('SETUP_USERNAME', 'setup-admin')
+    monkeypatch.setenv('SETUP_PASSWORD', 'correct-horse-battery')
 
 
 @pytest.fixture

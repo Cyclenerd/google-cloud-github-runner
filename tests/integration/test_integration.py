@@ -4,7 +4,7 @@ import base64
 from unittest.mock import patch
 
 
-def make_basic_auth_headers(username='cloud', password='test-project'):
+def make_basic_auth_headers(username='setup-admin', password='correct-horse-battery'):
     """Create HTTP Basic Auth headers."""
     credentials = base64.b64encode(f'{username}:{password}'.encode()).decode()
     return {'Authorization': f'Basic {credentials}'}

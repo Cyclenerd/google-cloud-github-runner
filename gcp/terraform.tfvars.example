@@ -1,0 +1,31 @@
+# Copy to terraform.tfvars (gitignored) and adjust. Deployment-specific settings go here,
+# not in variables.tf defaults. project_id and the /setup credentials can also be given as
+# TF_VAR_project_id, TF_VAR_github_runners_manager_setup_username and
+# TF_VAR_github_runners_manager_setup_password environment variables.
+
+# project_id = "my-project"
+region = "us-central1"
+zone   = "b"
+
+# Runner VMs are force-deleted after this many seconds (default: 5 days).
+# github_runners_max_run_duration = 10800
+
+# Reconciler: every repository the GitHub App is installed on is scanned; list any to ignore.
+# github_runners_reconcile_exclude_repositories = ["my-org/archived-repo"]
+
+# Templates. Overriding replaces the whole default list, so keep the eight gcp-auto ladder rungs
+# (the validation refuses a list without them). Leaving out every arch = "arm64" entry also skips
+# the ARM image build at apply time.
+github_runners_types = [
+  # --- your explicit labels (runs-on: <name>) ---
+  { name = "gcp-ubuntu-24-04", instance_type = "e2-standard-4", vcpu = 4, memory = 16, disk_type = "pd-ssd", disk_size = 25, disk_provisioned_iops = 0, disk_provisioned_throughput = 0, image = "ubuntu-2404-lts-amd64", arch = "amd64" },
+  # --- gcp-auto ladder rungs (required) ---
+  { name = "gcp-ubuntu-24-04-compute-16", instance_type = "c4-standard-16", vcpu = 16, memory = 60, disk_type = "hyperdisk-balanced", disk_size = 100, disk_provisioned_iops = 3600, disk_provisioned_throughput = 290, image = "ubuntu-2404-lts-amd64", arch = "amd64" },
+  { name = "gcp-ubuntu-24-04-compute-8", instance_type = "c4-standard-8", vcpu = 8, memory = 30, disk_type = "hyperdisk-balanced", disk_size = 100, disk_provisioned_iops = 3600, disk_provisioned_throughput = 290, image = "ubuntu-2404-lts-amd64", arch = "amd64" },
+  { name = "gcp-ubuntu-24-04-compute-4", instance_type = "c4-standard-4", vcpu = 4, memory = 15, disk_type = "hyperdisk-balanced", disk_size = 25, disk_provisioned_iops = 3600, disk_provisioned_throughput = 290, image = "ubuntu-2404-lts-amd64", arch = "amd64" },
+  { name = "gcp-ubuntu-24-04-compute-2", instance_type = "c4-standard-2", vcpu = 2, memory = 7.5, disk_type = "hyperdisk-balanced", disk_size = 25, disk_provisioned_iops = 3600, disk_provisioned_throughput = 290, image = "ubuntu-2404-lts-amd64", arch = "amd64" },
+  { name = "gcp-ubuntu-24-04-general-16", instance_type = "e2-standard-16", vcpu = 16, memory = 64, disk_type = "pd-ssd", disk_size = 100, disk_provisioned_iops = 0, disk_provisioned_throughput = 0, image = "ubuntu-2404-lts-amd64", arch = "amd64" },
+  { name = "gcp-ubuntu-24-04-general-8", instance_type = "e2-standard-8", vcpu = 8, memory = 32, disk_type = "pd-ssd", disk_size = 100, disk_provisioned_iops = 0, disk_provisioned_throughput = 0, image = "ubuntu-2404-lts-amd64", arch = "amd64" },
+  { name = "gcp-ubuntu-24-04-general-4", instance_type = "e2-standard-4", vcpu = 4, memory = 16, disk_type = "pd-ssd", disk_size = 25, disk_provisioned_iops = 0, disk_provisioned_throughput = 0, image = "ubuntu-2404-lts-amd64", arch = "amd64" },
+  { name = "gcp-ubuntu-24-04-general-2", instance_type = "e2-standard-2", vcpu = 2, memory = 8, disk_type = "pd-ssd", disk_size = 25, disk_provisioned_iops = 0, disk_provisioned_throughput = 0, image = "ubuntu-2404-lts-amd64", arch = "amd64" },
+]

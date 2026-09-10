@@ -13,13 +13,20 @@ setup_bp = Blueprint('setup', __name__, url_prefix='/setup')
 
 
 def check_auth(username, password):
-    """Check if username/password combination is valid using timing-safe comparison."""
-    expected_username = os.environ.get('SETUP_USERNAME', 'cloud')
-    expected_password = os.environ.get('SETUP_PASSWORD') or os.environ.get('GOOGLE_CLOUD_PROJECT', '')
+    """Check if username/password combination is valid using timing-safe comparison.
+
+    Both SETUP_USERNAME and SETUP_PASSWORD must be configured (Terraform stores them in Secret
+    Manager and mounts them on the service); without them the setup routes stay closed.
+    """
+    expected_username = os.environ.get('SETUP_USERNAME', '')
+    expected_password = os.environ.get('SETUP_PASSWORD', '')
+    if not expected_username or not expected_password:
+        logger.error("SETUP_USERNAME/SETUP_PASSWORD not configured; refusing setup access")
+        return False
 
     # Use secrets.compare_digest for timing-safe comparison
-    username_match = secrets.compare_digest(username, expected_username)
-    password_match = secrets.compare_digest(password, expected_password)
+    username_match = secrets.compare_digest(username or '', expected_username)
+    password_match = secrets.compare_digest(password or '', expected_password)
 
     return username_match and password_match
 

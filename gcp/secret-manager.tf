@@ -30,6 +30,8 @@ module "secret-manager" {
     github-installation-id = local.default_secret_manager_config
     github-private-key     = local.default_secret_manager_config
     github-webhook-secret  = local.default_secret_manager_config
+    setup-username         = local.default_secret_manager_config
+    setup-password         = local.default_secret_manager_config
   }
   depends_on = [
     time_sleep.wait_for_service_account_cloud_run
@@ -39,11 +41,20 @@ module "secret-manager" {
 # Create initial placeholder secret versions (will be updated with actual values)
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/secret_manager_secret_version
 resource "google_secret_manager_secret_version" "secret-version-default" {
-  for_each = module.secret-manager.ids
+  for_each = { for name, id in module.secret-manager.ids : name => id if !startswith(name, "setup-") }
 
   secret      = each.value
   secret_data = "initial secret"
   lifecycle {
     ignore_changes = all
   }
+}
+
+# Setup page credentials, set from Terraform variables (a new version on every change)
+resource "google_secret_manager_secret_version" "secret-version-setup" {
+  # Static keys: a for_each over a sensitive value is rejected by Terraform.
+  for_each = toset(["setup-username", "setup-password"])
+
+  secret      = module.secret-manager.ids[each.key]
+  secret_data = each.key == "setup-username" ? var.github_runners_manager_setup_username : var.github_runners_manager_setup_password
 }

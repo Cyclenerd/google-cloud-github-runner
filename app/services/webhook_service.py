@@ -4,6 +4,8 @@ Service for processing webhook events.
 import logging
 import re
 from app.clients import GitHubClient, GCloudClient
+from app.clients.gcloud_client import JOB_ID_LABEL, LIVE_INSTANCE_STATUSES
+from app.clients.tasks_client import TasksClient
 
 logger = logging.getLogger(__name__)
 
@@ -11,10 +13,11 @@ logger = logging.getLogger(__name__)
 class WebhookService:
     """Service to process GitHub webhook payloads and trigger runner lifecycle actions."""
 
-    def __init__(self):
-        """Initialize WebhookService with API clients."""
-        self.github_client = GitHubClient()
-        self.gcloud_client = GCloudClient()
+    def __init__(self, github_client=None, gcloud_client=None, tasks_client=None):
+        """Initialize WebhookService with API clients (injectable for the reconciler and tests)."""
+        self.github_client = github_client or GitHubClient()
+        self.gcloud_client = gcloud_client or GCloudClient()
+        self.tasks_client = tasks_client or TasksClient()
 
     def _validate_payload(self, payload):
         """Validate webhook payload structure and content."""
@@ -80,12 +83,37 @@ class WebhookService:
                     template_name,
                     delivery_id,
                 )
-                instance_name = self._handle_queued_job(
+                job_id = workflow_job.get('id')
+                payload = {
+                    'template_name': template_name,
+                    'repo_url': repo_url,
+                    'repo_owner_url': repo_owner_url,
+                    'repo_name': repo_name,
+                    'org_name': org_name,
+                    'job_id': job_id,
+                    'delivery_id': delivery_id,
+                }
+                if self.tasks_client.enabled and job_id is not None:
+                    # Hand the creation to Cloud Tasks: answers GitHub at once, dedupes redeliveries
+                    # by job id, retries capacity errors with backoff.
+                    try:
+                        outcome = self.tasks_client.enqueue_provision(payload, job_id, delivery_id=delivery_id)
+                        return {'action': outcome, 'runner_name': None, 'job_id': job_id}
+                    except Exception as e:
+                        logger.warning(
+                            "Could not enqueue provisioning task for job %s (%s); creating the VM inline, "
+                            "delivery_id: %s",
+                            job_id,
+                            e,
+                            delivery_id,
+                        )
+                instance_name = self.provision_runner(
                     template_name,
                     repo_url,
                     repo_owner_url,
                     repo_name,
                     org_name,
+                    job_id=job_id,
                     delivery_id=delivery_id,
                 )
                 return {'action': 'created', 'runner_name': instance_name}
@@ -107,16 +135,21 @@ class WebhookService:
 
         return {'action': 'ignored', 'runner_name': None}
 
-    def _handle_queued_job(
+    def provision_runner(
         self,
         template_name,
         repo_url,
         repo_owner_url,
         repo_name,
         org_name,
+        job_id=None,
         delivery_id=None,
+        name_suffix='',
     ):
-        """Handle queued workflow job.
+        """Create a runner VM for a queued workflow job.
+
+        Shared by the webhook (queued event) and the reconciler, so both go through the
+        same registration-token, operation-wait and zone-fallback path.
 
         Returns:
             str or None: The name of the created runner instance.
@@ -134,6 +167,8 @@ class WebhookService:
                     template_name,
                     repo_name,
                     delivery_id=delivery_id,
+                    job_id=job_id,
+                    name_suffix=name_suffix,
                 )
             elif repo_name:
                 # Create GitHub Actions runner instance for repository
@@ -141,7 +176,8 @@ class WebhookService:
                     repo_name=repo_name, delivery_id=delivery_id
                 )
                 return self.gcloud_client.create_runner_instance(
-                    token, repo_url, template_name, repo_name, delivery_id=delivery_id
+                    token, repo_url, template_name, repo_name, delivery_id=delivery_id,
+                    job_id=job_id, name_suffix=name_suffix,
                 )
             else:
                 logger.error(
@@ -156,6 +192,63 @@ class WebhookService:
                 "Failed to spawn runner: %s, delivery_id: %s", str(e), delivery_id
             )
             raise
+
+    def provision_from_task(self, payload):
+        """Handle one Cloud Tasks provisioning task (idempotent).
+
+        Skips when the job is no longer queued on GitHub or a live VM for the job already exists,
+        otherwise provisions through the same path as the webhook.
+
+        Returns:
+            dict: {'action': 'created'|'skipped', 'runner_name', 'job_id', 'reason'}.
+        """
+        job_id = payload.get('job_id')
+        repo_name = payload.get('repo_name')
+        delivery_id = payload.get('delivery_id')
+        result = {'action': 'skipped', 'runner_name': None, 'job_id': job_id, 'reason': ''}
+        for key in ('repo_url', 'repo_owner_url'):
+            url = payload.get(key) or ''
+            if url and not re.match(r'^https://github\.com/[\w\-\.]+(/[\w\-\.]+)?$', url):
+                raise ValueError(f"Invalid {key} in provisioning task")
+
+        if job_id is not None and repo_name:
+            try:
+                job = self.github_client.get_workflow_job(repo_name, job_id)
+            except Exception as e:
+                logger.warning("Could not re-check job %s before provisioning (%s); provisioning anyway", job_id, e)
+                job = {'status': 'queued'}
+            if job is None:
+                # 404 also means the installation lacks actions:read; an unneeded VM is cleaned in
+                # ten minutes, a job left without a runner is not. Provision.
+                logger.warning("Job %s not found on GitHub when re-checking; provisioning anyway", job_id)
+                job = {'status': 'queued'}
+            status = job.get('status')
+            if status != 'queued':
+                result['reason'] = f"job is {status}"
+                logger.info("Provisioning task for job %s skipped: %s, delivery_id: %s", job_id, result['reason'],
+                            delivery_id)
+                return result
+            for vm in self.gcloud_client.list_runner_instances():
+                if vm.get('status') in LIVE_INSTANCE_STATUSES and (vm.get('labels') or {}).get(JOB_ID_LABEL) == str(job_id):
+                    result['reason'] = f"VM {vm['name']} already exists in zone {vm['zone']}"
+                    result['runner_name'] = vm['name']
+                    logger.info("Provisioning task for job %s skipped: %s, delivery_id: %s", job_id, result['reason'],
+                                delivery_id)
+                    return result
+
+        instance_name = self.provision_runner(
+            payload.get('template_name'),
+            payload.get('repo_url'),
+            payload.get('repo_owner_url'),
+            repo_name,
+            payload.get('org_name'),
+            job_id=job_id,
+            delivery_id=delivery_id,
+        )
+        if instance_name is None:
+            result['reason'] = 'no matching instance template'
+            return result
+        return {'action': 'created', 'runner_name': instance_name, 'job_id': job_id, 'reason': ''}
 
     def _handle_completed_job(self, workflow_job, delivery_id=None):
         """Handle completed workflow job.
