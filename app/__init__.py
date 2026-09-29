@@ -5,17 +5,6 @@ import logging
 import os
 import secrets
 from flask import Flask, render_template, send_from_directory
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-
-
-# Initialize rate limiter
-limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=["60 per hour"],
-    storage_uri='memory://',
-    headers_enabled=True,  # Return X-RateLimit-* headers
-)
 
 
 def create_app():
@@ -35,9 +24,6 @@ def create_app():
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 hour
     app.config['MAX_CONTENT_LENGTH'] = 64 * 1024  # 64 KB
-
-    # Initialize rate limiter
-    limiter.init_app(app)
 
     # Configure logging
     logging.basicConfig(
