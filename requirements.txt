@@ -4,5 +4,5 @@ google-cloud-compute==1.54.0
 google-cloud-secret-manager==2.31.0
 gunicorn==26.2.0
 PyJWT==2.15.1
-python-dotenv==1.2.3
+python-dotenv==1.2.4
 requests==2.34.2
